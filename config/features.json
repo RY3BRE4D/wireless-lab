@@ -1,0 +1,20 @@
+{
+  "ir": {
+    "enabled": true
+  },
+  "nfc_pn532": {
+    "enabled": true,
+    "i2cBus": 1,
+    "interface": "i2c"
+  },
+  "rfid_mfrc522": {
+    "csPin": 8,
+    "enabled": false,
+    "rstPin": 25,
+    "spiBus": 0,
+    "spiDevice": 0
+  },
+  "stats": {
+    "enabled": true
+  }
+}
