@@ -1,0 +1,33 @@
+# Here are the system dependancies required for all of the wireless-lab features to work
+# Use the following commands to install them from this file
+
+# sudo apt update
+# xargs -a system-deps.txt sudo apt install -y
+
+# ---------- Core Python / Build ----------
+python3
+python3-venv
+python3-pip
+python3-dev
+build-essential
+cmake
+
+# ---------- GPIO / Pi Hardware ----------
+python3-gpiozero
+python3-rpi.gpio
+
+# ---------- I2C ----------
+i2c-tools
+
+# ---------- NFC ----------
+libnfc-bin
+
+# ---------- IR ----------
+lirc
+ir-keytable
+
+# ---------- Pillow / Imaging ----------
+libjpeg-dev
+zlib1g-dev
+libfreetype6-dev
+libopenjp2-7
