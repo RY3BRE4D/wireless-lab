@@ -31,3 +31,8 @@ libjpeg-dev
 zlib1g-dev
 libfreetype6-dev
 libopenjp2-7
+
+# ---------- WiFi AP + Management ----------
+network-manager
+wireless-tools
+iw
