@@ -1,0 +1,16 @@
+[Unit]
+Description=wireless-lab WiFi Fallback AP
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/pizero/wireless-lab
+ExecStart=/home/pizero/wireless-lab/venv/bin/python /home/pizero/wireless-lab/services/wifiFallback.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
