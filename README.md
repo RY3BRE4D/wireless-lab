@@ -6,6 +6,7 @@ A modular Raspberry Pi-based wireless experimentation platform featuring:
 - IR capture and transmission
 - NFC (PN532) interaction
 - System and network monitoring
+- WiFi managment and fallback AP service
 - Optional hardware-based panic button service
 
 ---
@@ -26,13 +27,14 @@ The system is built to be:
 
 ### Web UI
 - Flask-based interface
+- Central control panel for all modules and system features
 - Feature toggles via config
 - Real-time system/network info
 
 ### IR Support
 - Capture raw IR signals
 - Decode protocols
-- Transmit signals
+- Transmit signals (raw or encoded)
 
 ### NFC (PN532)
 - Read NFC tags
@@ -44,14 +46,27 @@ The system is built to be:
 - Network information
 - Interface status
 
+### WiFi Management
+- Scan nearby WiFi networks (via NetworkManager)
+- Add networks manually (SSID + password)
+- Connect to networks on demand (with optional autoconnect + priority)
+- Manage saved profiles (list, delete)
+- Configure autoconnect behavior and connection priority
+
+### Fallback Access Point
+- Automatically start AP when no WiFi connection is available
+- Hosted using NetworkManager (no hostapd/dnsmasq required)
+- Provides local access to Web UI for recovery/setup
+- Automatically shuts down when a valid WiFi connection is established
+
 ### Panic Button (Optional)
 - GPIO-based hardware trigger
 - OLED status display
-- Runs as independent systemd service
+- Runs as independent systemd service for reliability
 
 ---
 
-## Project Structure
+## Project Structure (basic)
 
 ```
 webUI/
@@ -157,14 +172,36 @@ journalctl -u panicButton -f
 
 ## Systemd Services
 
-### Web UI
+### wireless-lab
 
 ```
-sudo cp services/webUI.service /etc/systemd/system/webUI.service
+sudo cp services/wireless-lab.service /etc/systemd/system/wireless-lab.service
 sudo systemctl daemon-reload
-sudo systemctl enable webUI
-sudo systemctl start webUI
+sudo systemctl enable wireless-lab
+sudo systemctl start wireless-lab
 ```
+
+### wifiFallback
+
+```
+sudo cp services/wifiFallback.service /etc/systemd/system/wifiFallback.service
+sudo systemctl daemon-reload
+sudo systemctl enable wifiFallback
+sudo systemctl start wifiFallback
+```
+
+---
+
+## WiFi Management Requirements
+
+This project uses NetworkManager (`nmcli`) for WiFi control.
+
+Required:
+- network-manager
+- sudo access (or run service as root)
+
+Optional:
+- AP mode support on WiFi hardware
 
 ---
 
