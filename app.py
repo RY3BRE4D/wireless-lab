@@ -1,5 +1,16 @@
 import os
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template, redirect, url_for
+from modules.wifiManager import (
+    getCurrentStatus,
+    scanNetworks,
+    listSavedConnections,
+    connectToNetwork,
+    addNetwork,
+    deleteConnection,
+    ensureSetupApProfile,
+    startSetupAp,
+    stopSetupAp,
+)
 from modules.ui import renderPage
 from modules.systemStats import getStats
 from modules.irModule import IRCaptureManager, IRDecodeManager
@@ -89,6 +100,17 @@ def home():
     </div>
     """)
 
+    if isEnabled(features, "wifi"):
+        cards.append("""
+        <div class="card">
+          <div class="row">
+            <div class="label">WiFi</div>
+            <div class="value"><a href="/wifi">Open</a></div>
+          </div>
+          <div class="small muted">Scan + Connect + Saved Profiles + Setup AP</div>
+        </div>
+        """)
+
     cards.append("""
     <div class="card">
       <div class="small muted">
@@ -128,6 +150,7 @@ def modulesPage():
     body += rowToggle("ir", "IR", "RAW capture (ir-ctl) + decoded capture (ir-keytable) + send RAW")
     body += rowToggle("rfid_mfrc522", "RFID (MFRC522)", "SPI RC522 reader (kept disabled until you need it)")
     body += rowToggle("nfc_pn532", "NFC (PN532)", "I2C PN532: classify + probe + NDEF read/write")
+    body += rowToggle("wifi", "WiFi", "Scan + Connect + Saved Profiles + Setup AP")
 
     body += """
     <div class="card">
@@ -155,7 +178,8 @@ def modulesPage():
           stats: document.getElementById('t_stats').checked,
           ir: document.getElementById('t_ir').checked,
           rfid_mfrc522: document.getElementById('t_rfid_mfrc522').checked,
-          nfc_pn532: document.getElementById('t_nfc_pn532').checked
+          nfc_pn532: document.getElementById('t_nfc_pn532').checked,
+          wifi: document.getElementById('t_wifi').checked
         };
 
         document.getElementById('saveStatus').textContent = 'Saving...';
@@ -983,6 +1007,101 @@ if isEnabled(features, "nfc_pn532"):
         wipeData = bool(data.get("wipeData", True))
         return jsonify(pn532.wipeMifareClassicToFactory(resetKeys=resetKeys, wipeData=wipeData))
 
+# ---------- Network Routes ----------
+if isEnabled(features, "wifi"):
+
+    @app.get("/wifi")
+    def wifiPage():
+        status = getCurrentStatus()
+        scan = scanNetworks()
+        saved = listSavedConnections()
+        message = request.args.get("message", "")
+
+        body = render_template(
+            "wifi.html",
+            status=status,
+            scan=scan,
+            saved=saved,
+            message=message,
+        )
+
+        return renderPage("Pi Zero Lab - WiFi", body, features=features)
+
+    @app.post("/wifi/connect")
+    def wifiConnect():
+        ssid = (request.form.get("ssid") or "").strip()
+        password = request.form.get("password") or ""
+        autoConnect = bool(request.form.get("autoConnect"))
+        priorityText = (request.form.get("priority") or "0").strip()
+
+        try:
+            priority = int(priorityText)
+        except ValueError:
+            priority = 0
+
+        result = connectToNetwork(
+            ssid=ssid,
+            password=password,
+            saveProfile=True,
+            autoConnect=autoConnect,
+            priority=priority,
+        )
+
+        msg = result.get("message") if result.get("ok") else result.get("error", "Connect Failed")
+        return redirect(url_for("wifiPage", message=msg))
+
+    @app.post("/wifi/add")
+    def wifiAdd():
+        ssid = (request.form.get("ssid") or "").strip()
+        password = request.form.get("password") or ""
+        autoConnect = bool(request.form.get("autoConnect"))
+        priorityText = (request.form.get("priority") or "0").strip()
+
+        try:
+            priority = int(priorityText)
+        except ValueError:
+            priority = 0
+
+        result = addNetwork(
+            ssid=ssid,
+            password=password,
+            autoConnect=autoConnect,
+            priority=priority,
+        )
+
+        msg = result.get("message") if result.get("ok") else result.get("error", "Failed")
+        return redirect(url_for("wifiPage", message=msg))
+
+    @app.post("/wifi/delete")
+    def wifiDelete():
+        connectionName = (request.form.get("connectionName") or "").strip()
+        result = deleteConnection(connectionName)
+        msg = "Connection Deleted" if result.get("ok") else result.get("error", "Delete Failed")
+        return redirect(url_for("wifiPage", message=msg))
+
+    @app.post("/wifi/setup-ap/ensure")
+    def wifiEnsureSetupAp():
+        wifiCfg = features.get("wifi", {})
+        result = ensureSetupApProfile(
+            setupSsid=wifiCfg.get("setupSsid", "wireless-lab-setup"),
+            setupPassword=wifiCfg.get("setupPassword", "changeme123"),
+            priority=int(wifiCfg.get("setupPriority", -50)),
+        )
+        msg = "Setup AP Profile Ready" if result.get("ok") else result.get("error", "Failed")
+        return redirect(url_for("wifiPage", message=msg))
+
+    @app.post("/wifi/setup-ap/start")
+    def wifiSetupApStart():
+        result = startSetupAp()
+        msg = "Setup AP Started" if result.get("ok") else result.get("error", "Failed")
+        return redirect(url_for("wifiPage", message=msg))
+
+    @app.post("/wifi/setup-ap/stop")
+    def wifiSetupApStop():
+        result = stopSetupAp()
+        msg = "Setup AP Stopped" if result.get("ok") else result.get("error", "Failed")
+        return redirect(url_for("wifiPage", message=msg))
+
 # ---------- Modules API ----------
 
 @app.post("/api/modules/save")
@@ -995,6 +1114,7 @@ def apiModulesSave():
     setFeatureEnabled(features, "ir", bool(data.get("ir", False)))
     setFeatureEnabled(features, "rfid_mfrc522", bool(data.get("rfid_mfrc522", False)))
     setFeatureEnabled(features, "nfc_pn532", bool(data.get("nfc_pn532", False)))
+    setFeatureEnabled(features, "wifi", bool(data.get("wifi", False)))
 
     ok, err = saveFeatures(FEATURES_PATH, features)
     if not ok:

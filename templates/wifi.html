@@ -1,0 +1,220 @@
+<div class="card">
+    <div class="row">
+        <div class="label">Current Status</div>
+        <div class="value">
+            {% if status.ok and status.connected %}
+                Connected
+            {% elif status.ok %}
+                {{ status.state or 'Unknown' }}
+            {% else %}
+                Error
+            {% endif %}
+        </div>
+    </div>
+
+    {% if status.ok %}
+        <div class="row">
+            <div class="label">NetworkManager</div>
+            <div class="value">
+                <span class="{{ 'good' if status.networkManager else 'bad' }}">
+                    {{ 'Active' if status.networkManager else 'Inactive' }}
+                </span>
+            </div>
+        </div>
+        <div class="row">
+            <div class="label">WiFi Device</div>
+            <div class="value">{{ status.wifiDevice or '-' }}</div>
+        </div>
+        <div class="row">
+            <div class="label">State</div>
+            <div class="value">{{ status.state or '-' }}</div>
+        </div>
+        <div class="row">
+            <div class="label">Active Connection</div>
+            <div class="value">{{ status.connectionName or '-' }}</div>
+        </div>
+    {% else %}
+        <div class="small bad">{{ status.error }}</div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="row">
+        <div class="label">Setup AP</div>
+        <div class="value">Recovery / Testing</div>
+    </div>
+
+    <div class="small muted" style="margin-bottom:10px;">
+        Use This For Testing Or Recovery When Normal WiFi Is Down.
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <form method="post" action="/wifi/setup-ap/ensure">
+            <button class="pill" type="submit">Create / Refresh AP Profile</button>
+        </form>
+
+        <form method="post" action="/wifi/setup-ap/start">
+            <button class="pill" type="submit">Start Setup AP</button>
+        </form>
+
+        <form method="post" action="/wifi/setup-ap/stop">
+            <button class="pill" type="submit">Stop Setup AP</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="row">
+        <div class="label">Add Network Manually</div>
+        <div class="value">Save Profile</div>
+    </div>
+
+    <form method="post" action="/wifi/add" style="margin-top:10px;">
+        <div class="row" style="align-items:flex-start; flex-wrap:wrap;">
+            <div style="flex:1; min-width:220px;">
+                <div class="small muted">SSID</div>
+                <input type="text" name="ssid" required style="width:100%; box-sizing:border-box;" />
+            </div>
+
+            <div style="flex:1; min-width:220px;">
+                <div class="small muted">Password</div>
+                <input type="password" name="password" style="width:100%; box-sizing:border-box;" />
+            </div>
+        </div>
+
+        <div class="row" style="align-items:flex-start; flex-wrap:wrap; margin-top:10px;">
+            <div style="min-width:160px;">
+                <div class="small muted">Autoconnect</div>
+                <input type="checkbox" name="autoConnect" checked />
+            </div>
+
+            <div style="min-width:160px;">
+                <div class="small muted">Priority</div>
+                <input type="number" name="priority" value="0" style="width:100%; box-sizing:border-box;" />
+            </div>
+
+            <div style="min-width:160px; align-self:end;">
+                <button class="pill" type="submit">Save Network</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="row">
+        <div class="label">Nearby Networks</div>
+        <div class="value">
+            <form method="get" action="/wifi" style="margin:0;">
+                <button class="pill" type="submit">Refresh Scan</button>
+            </form>
+        </div>
+    </div>
+
+    {% if scan.ok %}
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                <thead>
+                    <tr>
+                        <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">SSID</th>
+                        <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Signal</th>
+                        <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Security</th>
+                        <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Connect</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for net in scan.networks %}
+                    <tr>
+                        <td style="padding:8px; border-bottom:1px solid var(--border);">
+                            {{ net.ssid }}
+                            {% if net.inUse %}
+                                <span class="small muted">(In Use)</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:8px; border-bottom:1px solid var(--border);">{{ net.signal }}</td>
+                        <td style="padding:8px; border-bottom:1px solid var(--border);">{{ net.security or '-' }}</td>
+                        <td style="padding:8px; border-bottom:1px solid var(--border);">
+                            <form method="post" action="/wifi/connect">
+                                <input type="hidden" name="ssid" value="{{ net.ssid }}">
+
+                                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+                                    <div style="min-width:180px;">
+                                        <div class="small muted">Password</div>
+                                        <input type="password" name="password" style="width:100%; box-sizing:border-box;" />
+                                    </div>
+
+                                    <div style="min-width:120px;">
+                                        <div class="small muted">Autoconnect</div>
+                                        <input type="checkbox" name="autoConnect" checked />
+                                    </div>
+
+                                    <div style="min-width:120px;">
+                                        <div class="small muted">Priority</div>
+                                        <input type="number" name="priority" value="0" style="width:100%; box-sizing:border-box;" />
+                                    </div>
+
+                                    <div>
+                                        <button class="pill" type="submit">Connect</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="small bad" style="margin-top:10px;">{{ scan.error }}</div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="row">
+        <div class="label">Saved WiFi Profiles</div>
+        <div class="value">{{ saved.connections|length if saved.ok else 0 }}</div>
+    </div>
+
+    {% if saved.ok %}
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                <thead>
+                    <tr>
+                        <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Name</th>
+                        <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Device</th>
+                        <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Autoconnect</th>
+                        <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Priority</th>
+                        <th style="text-align:left; padding:8px; border-bottom:1px solid var(--border);">Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for conn in saved.connections %}
+                    <tr>
+                        <td style="padding:8px; border-bottom:1px solid var(--border);">{{ conn.name }}</td>
+                        <td style="padding:8px; border-bottom:1px solid var(--border);">{{ conn.device or '-' }}</td>
+                        <td style="padding:8px; border-bottom:1px solid var(--border);">{{ 'Yes' if conn.autoconnect else 'No' }}</td>
+                        <td style="padding:8px; border-bottom:1px solid var(--border);">{{ conn.priority }}</td>
+                        <td style="padding:8px; border-bottom:1px solid var(--border);">
+                            <form method="post" action="/wifi/delete" onsubmit="return confirm('Delete {{ conn.name }}?');">
+                                <input type="hidden" name="connectionName" value="{{ conn.name }}">
+                                <button class="pill" type="submit">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="small bad" style="margin-top:10px;">{{ saved.error }}</div>
+    {% endif %}
+</div>
+
+{% if message %}
+<div class="card">
+    <div class="row">
+        <div class="label">Message</div>
+        <div class="value">Status</div>
+    </div>
+    <div style="margin-top:8px;"><strong>{{ message }}</strong></div>
+</div>
+{% endif %}

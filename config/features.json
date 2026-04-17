@@ -16,5 +16,8 @@
   },
   "stats": {
     "enabled": true
+  },
+  "wifi": {
+    "enabled": true
   }
 }

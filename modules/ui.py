@@ -73,6 +73,7 @@ def renderPage(title, bodyHtml, features=None):
     showStats = bool(features.get("stats", {}).get("enabled", True))
     showIr = bool(features.get("ir", {}).get("enabled", True))
     showNfc = bool(features.get("nfc_pn532", {}).get("enabled", False))
+    showWifi = bool(features.get("wifi", {}).get("enabled", False))
 
     navLinks = f"""
       <a class="pill" href="{url_for('home')}">Home</a>
@@ -87,6 +88,9 @@ def renderPage(title, bodyHtml, features=None):
     if showNfc:
         navLinks += f"""<a class="pill" href="{url_for('nfcPage')}">NFC</a>"""
 
+    if showWifi:
+        navLinks += f"""<a class="pill" href="{url_for('wifiPage')}">WiFi</a> """
+
     navLinks += f"""
       <a class="pill" href="{url_for('modulesPage')}">Modules</a>
     """
@@ -96,7 +100,7 @@ def renderPage(title, bodyHtml, features=None):
       {navLinks}
       <span class="muted">|</span>
       <button class="pill" id="themeToggle" onclick="toggleTheme()">Theme</button>
-      <a class="pill" href="/pinout">Pinout</a>
+      <a class="pill" href="{url_for('pinoutPage')}">Pinout</a>
 
     </div>
     """
