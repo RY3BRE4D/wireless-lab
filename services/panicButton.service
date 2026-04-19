@@ -6,8 +6,8 @@ Wants=NetworkManager.service
 [Service]
 Type=simple
 
-ExecStart=/home/pizero/wireless-lab/services/panicButton/venv/bin/python /home/pizero/wireless-lab/services/panicButton/panicButton.py
-WorkingDirectory=/home/pizero/wireless-lab/services/panicButton
+ExecStart=/home/piradio/wireless-lab/services/panicButton/venv/bin/python /home/piradio/wireless-lab/services/panicButton/panicButton.py
+WorkingDirectory=/home/piradio/wireless-lab/services/panicButton
 
 # Restart If It Ever Crashes
 Restart=always
