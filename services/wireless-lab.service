@@ -5,11 +5,11 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=pizero
-WorkingDirectory=/home/pizero/wireless-lab
-Environment="PATH=/home/pizero/wireless-lab/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+User=piradio
+WorkingDirectory=/home/piradio/wireless-lab
+Environment="PATH=/home/piradio/wireless-lab/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 #ExecStartPre=/bin/sh -c 'for i in $(seq 1 60); do [ -e /dev/lirc0 ] && exit 0; sleep 0.5; done; exit 1'
-ExecStart=/home/pizero/wireless-lab/venv/bin/python /home/pizero/wireless-lab/app.py
+ExecStart=/home/piradio/wireless-lab/venv/bin/python /home/piradio/wireless-lab/app.py
 Restart=on-failure
 RestartSec=2
 

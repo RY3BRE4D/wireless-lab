@@ -126,7 +126,7 @@ def getNetworkInfo():
 
     # Format for UI
     uiHost = _firstNonEmpty(hostname, "-") or "-"
-    ssh = "Offline" if uiHost in ["-", ""] else f"ssh pizero@{uiHost}.local"
+    ssh = "Offline" if uiHost in ["-", ""] else f"ssh piradio@{uiHost}.local"
 
     return {
         "hostname": _firstNonEmpty(hostname, "-") or "-",

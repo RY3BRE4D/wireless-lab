@@ -6,8 +6,8 @@ Wants=NetworkManager.service
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/pizero/wireless-lab
-ExecStart=/home/pizero/wireless-lab/venv/bin/python /home/pizero/wireless-lab/services/wifiFallback.py
+WorkingDirectory=/home/piradio/wireless-lab
+ExecStart=/home/piradio/wireless-lab/venv/bin/python /home/piradio/wireless-lab/services/wifiFallback.py
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
