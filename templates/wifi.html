@@ -78,7 +78,11 @@
 
             <div style="flex:1; min-width:220px;">
                 <div class="small muted">Password</div>
-                <input type="password" name="password" style="width:100%; box-sizing:border-box;" />
+                <input type="password" id="manualPassword" name="password" style="width:100%; box-sizing:border-box;" />
+
+                <label class="small muted" style="cursor:pointer;">
+                    <input type="checkbox" onclick="togglePassword('manualPassword')"> 👁
+                </label>
             </div>
         </div>
 
@@ -139,7 +143,14 @@
                                 <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
                                     <div style="min-width:180px;">
                                         <div class="small muted">Password</div>
-                                        <input type="password" name="password" style="width:100%; box-sizing:border-box;" />
+                                        <input type="password"
+                                               id="connectPassword{{ loop.index }}"
+                                               name="password"
+                                               style="width:100%; box-sizing:border-box;" />
+
+                                        <label class="small muted" style="cursor:pointer;">
+                                            <input type="checkbox" onclick="togglePassword('manualPassword')"> 👁
+                                        </label>
                                     </div>
 
                                     <div style="min-width:120px;">
@@ -218,3 +229,17 @@
     <div style="margin-top:8px;"><strong>{{ message }}</strong></div>
 </div>
 {% endif %}
+
+
+<script>
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    if (field.type === "password") {
+        field.type = "text";
+    } else {
+        field.type = "password";
+    }
+}
+</script>
