@@ -1,0 +1,53 @@
+{% if showStats %}
+<div class="card">
+  <div class="row">
+    <div class="label">Stats UI</div>
+    <div class="value"><a href="/stats">Open</a></div>
+  </div>
+  <div class="small muted">System Stats</div>
+</div>
+{% endif %}
+
+{% if showIr %}
+<div class="card">
+  <div class="row">
+    <div class="label">IR Lab</div>
+    <div class="value"><a href="/ir">Open</a></div>
+  </div>
+  <div class="small muted">RAW + DECODED Monitor + Replay</div>
+</div>
+{% endif %}
+
+{% if showNfc %}
+<div class="card">
+  <div class="row">
+    <div class="label">NFC (PN532)</div>
+    <div class="value"><a href="/nfc">Open</a></div>
+  </div>
+  <div class="small muted">Classification + Capability Probe + NDEF Read/Write</div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="row">
+    <div class="label">Modules</div>
+    <div class="value"><a href="/modules">Manage</a></div>
+  </div>
+  <div class="small muted">Enable/Disable Tech Without Deleting Code</div>
+</div>
+
+{% if showWifi %}
+<div class="card">
+  <div class="row">
+    <div class="label">WiFi</div>
+    <div class="value"><a href="/wifi">Open</a></div>
+  </div>
+  <div class="small muted">Scan + Connect + Saved Profiles + Setup AP</div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="small muted">
+    API Endpoints Live Under <b>/api</b>.
+  </div>
+</div>

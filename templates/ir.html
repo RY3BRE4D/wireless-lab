@@ -1,0 +1,373 @@
+<div class="card" id="deviceCard">
+  <div class="row">
+    <div class="label">IR Devices</div>
+    <div class="value small muted" id="devInfoTop">RX: - | TX: -</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="row">
+    <div class="label">RAW Capture</div>
+    <div class="value">
+      <button class="pill" onclick="startCapture()">Start</button>
+      <button class="pill" onclick="stopCapture()">Stop</button>
+      <button class="pill" onclick="clearCapture()">Clear</button>
+    </div>
+  </div>
+
+  <div class="small muted" id="irStatus">Idle</div>
+  <div class="small muted" id="feedMeta">-</div>
+
+  <textarea
+    id="feedBox"
+    readonly
+    style="
+      width:100%;
+      height:260px;
+      margin-top:10px;
+      font-family: monospace;
+      white-space: pre;
+      resize: vertical;
+    ">
+  </textarea>
+</div>
+
+<div class="card">
+  <div class="row">
+    <div class="label">DECODED Capture</div>
+    <div class="value">
+      <button class="pill" onclick="startDecoded()">Start</button>
+      <button class="pill" onclick="stopDecoded()">Stop</button>
+      <button class="pill" onclick="clearDecoded()">Clear</button>
+    </div>
+  </div>
+
+  <div class="small muted" id="decodedStatus">Loading...</div>
+  <div class="small muted" id="decodedMeta">-</div>
+
+  <textarea
+    id="decodedBox"
+    readonly
+    style="
+      width:100%;
+      height:180px;
+      margin-top:10px;
+      font-family: monospace;
+      white-space: pre;
+      resize: vertical;
+    ">
+  </textarea>
+</div>
+
+<div class="card">
+  <div class="row">
+    <div class="label">Send IR</div>
+    <div class="value" style="display:flex; gap:8px; align-items:center;">
+      <button class="pill" id="modeRawBtn" onclick="setSendMode('raw')">RAW</button>
+      <button class="pill" id="modeDecBtn" onclick="setSendMode('decoded')">Decoded</button>
+    </div>
+  </div>
+
+  <div class="small muted" id="sendHelp">
+    Choose RAW or Decoded.
+  </div>
+
+  <!-- RAW SEND -->
+  <div id="sendRawWrap" style="margin-top:10px;">
+    <div class="small muted">Tip: click a raw or decoded line to autofill.</div>
+    <textarea id="rawText" style="width:100%; height:140px; margin-top:10px; font-family: monospace;"></textarea>
+    <div style="margin-top:10px;">
+      <button class="pill" onclick="sendRaw()">Send RAW</button>
+    </div>
+  </div>
+
+  <!-- DECODED SEND -->
+  <div id="sendDecodedWrap" style="margin-top:10px; display:none;">
+    <div class="small muted">Tip: click a raw or decoded line to autofill.</div>
+
+    <div class="row" style="margin-top:10px;">
+      <div class="label">Protocol</div>
+      <div class="value" style="font-weight:400;">
+        <input id="decProtocol" style="width:160px;" placeholder="nec" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="label">Scancode</div>
+      <div class="value" style="font-weight:400;">
+        <input id="decScancode" style="width:160px;" placeholder="0x45" />
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <button class="pill" onclick="sendDecoded()">Send Decoded</button>
+    </div>
+  </div>
+
+  <div class="small muted" id="sendResult" style="margin-top:10px;"></div>
+</div>
+
+<script>
+  let pauseFeed = false;
+  let sendMode = 'raw';
+
+  async function apiPost(url, data) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data || {})
+    });
+    return await res.json();
+  }
+
+  async function refreshIr() {
+    try {
+      const res = await fetch('/api/ir/status', { cache: 'no-store' });
+      const s = await res.json();
+
+      document.getElementById('irStatus').textContent =
+        s.running ? 'Capturing...' : 'Idle';
+
+      document.getElementById('devInfoTop').textContent =
+        'RX: ' + s.rxDev +
+        ' | TX: ' + s.txDev +
+        (s.lastError ? (' | Error: ' + s.lastError) : '');
+
+      const lines = s.lines || [];
+      document.getElementById('feedMeta').textContent =
+        lines.length + ' lines';
+
+      const feed = document.getElementById('feedBox');
+      const newText = lines.length ? lines.join('\n') : '';
+
+      if (!pauseFeed && feed && feed.value !== newText) {
+        const nearBottom =
+          (feed.scrollTop + feed.clientHeight) >= (feed.scrollHeight - 20);
+
+        feed.value = newText;
+
+        if (nearBottom) {
+          feed.scrollTop = feed.scrollHeight;
+        }
+      }
+
+    } catch (e) {
+      document.getElementById('irStatus').textContent =
+        'Error: ' + e;
+    }
+  }
+
+  async function refreshDecoded() {
+    try {
+      const res = await fetch('/api/ir/decoded/status', { cache: 'no-store' });
+      const s = await res.json();
+
+      const statusEl = document.getElementById('decodedStatus');
+      const metaEl   = document.getElementById('decodedMeta');
+      const box      = document.getElementById('decodedBox');
+
+      if (statusEl) {
+        statusEl.textContent = s.running ? 'Capturing...' : 'Idle';
+      }
+
+      const lines = s.lines || [];
+
+      if (metaEl) {
+        metaEl.textContent =
+          lines.length + ' lines' +
+          (s.lastError ? (' | Error: ' + s.lastError) : '');
+      }
+
+      if (box) {
+        const newText = lines.length ? lines.join('\n') : '';
+
+        if (!pauseFeed && box.value !== newText) {
+          const nearBottom =
+            (box.scrollTop + box.clientHeight) >= (box.scrollHeight - 20);
+
+          box.value = newText;
+
+          if (nearBottom) {
+            box.scrollTop = box.scrollHeight;
+          }
+        }
+      }
+
+    } catch (e) {
+      const statusEl = document.getElementById('decodedStatus');
+      if (statusEl) statusEl.textContent = 'Decoded Error: ' + e;
+    }
+  }
+
+  async function startCapture() {
+    await apiPost('/api/ir/start', {});
+    refreshIr();
+  }
+
+  async function stopCapture() {
+    await apiPost('/api/ir/stop', {});
+    refreshIr();
+  }
+
+  async function clearCapture() {
+    await apiPost('/api/ir/clear', {});
+    refreshIr();
+  }
+
+  async function startDecoded() {
+    await apiPost('/api/ir/decoded/start', {});
+    refreshDecoded();
+  }
+
+  async function stopDecoded() {
+    await apiPost('/api/ir/decoded/stop', {});
+    refreshDecoded();
+  }
+
+  async function clearDecoded() {
+    await apiPost('/api/ir/decoded/clear', {});
+    refreshDecoded();
+  }
+
+  async function sendRaw() {
+    document.getElementById('sendResult').textContent = 'Sending...';
+    const rawText = document.getElementById('rawText').value;
+    const r = await apiPost('/api/ir/sendRaw', { rawText });
+    document.getElementById('sendResult').textContent =
+      r.ok ? ('OK ' + (r.output || '')) : ('Error: ' + (r.error || 'Unknown'));
+  }
+
+  function setSendMode(mode) {
+    sendMode = (mode === 'decoded') ? 'decoded' : 'raw';
+
+    const rawBtn = document.getElementById('modeRawBtn');
+    const decBtn = document.getElementById('modeDecBtn');
+    const rawWrap = document.getElementById('sendRawWrap');
+    const decWrap = document.getElementById('sendDecodedWrap');
+    const help = document.getElementById('sendHelp');
+
+    if (rawBtn) rawBtn.style.fontWeight = (sendMode === 'raw') ? '700' : '400';
+    if (decBtn) decBtn.style.fontWeight = (sendMode === 'decoded') ? '700' : '400';
+
+    if (rawWrap) rawWrap.style.display = (sendMode === 'raw') ? 'block' : 'none';
+    if (decWrap) decWrap.style.display = (sendMode === 'decoded') ? 'block' : 'none';
+
+    if (help) {
+      help.textContent = (sendMode === 'raw')
+        ? 'RAW mode: pulse/space or + / -'
+        : 'Decoded mode: protocol + scancode';
+    }
+  }
+
+  async function sendDecoded() {
+    document.getElementById('sendResult').textContent = 'Sending...';
+    const protocol = document.getElementById('decProtocol').value;
+    const scancode = document.getElementById('decScancode').value;
+
+    const r = await apiPost('/api/ir/sendDecoded', { protocol, scancode });
+    document.getElementById('sendResult').textContent =
+      r.ok ? ('OK ' + (r.output || '')) : ('Error: ' + (r.error || 'Unknown'));
+  }
+
+  const feedBox    = document.getElementById('feedBox');
+  const decodedBox = document.getElementById('decodedBox');
+  const rawBox     = document.getElementById('rawText');
+
+  function parseDecodedLine(line) {
+    // matches: "12:34:56  lirc protocol(nec): scancode = 0x45"
+    const m = line.match(/protocol\(([^)]+)\):\s*scancode\s*=\s*(0x[0-9a-fA-F]+|\d+)/);
+    if (!m) return null;
+    return { protocol: m[1].trim().toLowerCase(), scancode: m[2].trim().toLowerCase() };
+  }
+
+  function stripTimestamp(line) {
+    // "12:34:56  +9014 -4511 ..." -> "+9014 -4511 ..."
+    const parts = (line || '').split(/\s{2,}/);
+    if (parts.length >= 2) return (parts[1] || '').trim();
+    return (line || '').trim();
+  }
+
+  function stripTrailingGap(raw, gapThreshold = 25000) {
+    if (!raw) return raw;
+    const parts = raw.trim().split(/\s+/);
+    if (parts.length < 2) return raw;
+    const last = parts[parts.length - 1];
+    if (!last || last[0] !== '-') return raw;
+    const gap = Number(last.slice(1));
+    if (!Number.isFinite(gap)) return raw;
+    if (gap >= gapThreshold) {
+      parts.pop();
+    }
+    return parts.join(' ');
+  }
+
+  function currentLineFromTextarea(textarea) {
+    const text = textarea.value || '';
+    const pos = textarea.selectionStart || 0;
+    const start = text.lastIndexOf('\n', pos - 1) + 1;
+    let end = text.indexOf('\n', pos);
+    if (end === -1) end = text.length;
+    return text.substring(start, end).trim();
+  }
+
+  // Click decoded line -> autofill decoded send
+  if (decodedBox) {
+    decodedBox.addEventListener('click', () => {
+      const line = currentLineFromTextarea(decodedBox);
+      const parsed = parseDecodedLine(line);
+      if (!parsed) return;
+
+      const p = document.getElementById('decProtocol');
+      const s = document.getElementById('decScancode');
+      if (p) p.value = parsed.protocol;
+      if (s) s.value = parsed.scancode;
+
+      setSendMode('decoded');
+    });
+  }
+
+  // Click RAW line -> autofill RAW send (space-separated + / -)
+  if (feedBox) {
+    feedBox.addEventListener('click', () => {
+      const line = currentLineFromTextarea(feedBox);
+      if (!line) return;
+
+      let raw = stripTimestamp(line);
+      raw = stripTrailingGap(raw);
+
+      // Must look like + / - timing data
+      if (!(raw.includes('+') && raw.includes('-'))) return;
+
+      const rawTextEl = document.getElementById('rawText');
+      if (rawTextEl) rawTextEl.value = raw.trim();
+
+      setSendMode('raw');
+    });
+  }
+
+  // Pause feed while interacting
+  if (feedBox) {
+    feedBox.addEventListener('mousedown', () => pauseFeed = true);
+    feedBox.addEventListener('mouseup',   () => pauseFeed = false);
+    feedBox.addEventListener('mouseleave',() => pauseFeed = false);
+  }
+
+  if (decodedBox) {
+    decodedBox.addEventListener('mousedown', () => pauseFeed = true);
+    decodedBox.addEventListener('mouseup',   () => pauseFeed = false);
+    decodedBox.addEventListener('mouseleave',() => pauseFeed = false);
+  }
+
+  if (rawBox) {
+    rawBox.addEventListener('focus', () => pauseFeed = true);
+    rawBox.addEventListener('blur',  () => pauseFeed = false);
+  }
+
+  setSendMode('raw');
+  refreshIr();
+  refreshDecoded();
+  setInterval(() => {
+    refreshIr();
+    refreshDecoded();
+  }, 800);
+</script>

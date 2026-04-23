@@ -1,0 +1,184 @@
+<div class="card">
+  <div class="row">
+    <div class="label">PN532</div>
+    <div class="value">
+      <button class="pill" onclick="refreshStatus()">Status</button>
+    </div>
+  </div>
+  <div class="small muted mono" id="fwInfo">-</div>
+</div>
+
+<div class="card">
+  <div class="row">
+    <div class="label">Scan + Classify</div>
+    <div class="value">
+      <button class="pill" onclick="scanOnce()">Scan Once</button>
+      <button class="pill" onclick="probe()">Probe</button>
+    </div>
+  </div>
+  <div class="small muted" id="scanStatus">-</div>
+  <pre class="mono" id="scanOut" style="white-space:pre-wrap; margin-top:10px;">-</pre>
+</div>
+
+<div class="card">
+  <div class="row">
+    <div class="label">Read NDEF</div>
+    <div class="value">
+      <button class="pill" onclick="readNdef()">Read</button>
+    </div>
+  </div>
+  <div class="small muted">Best-Effort NDEF Read (Type 2 First, Then MIFARE Classic With Common Keys).</div>
+  <div class="small muted" id="readStatus" style="margin-top:10px;">-</div>
+</div>
+
+<div class="card">
+  <div class="row">
+    <div class="label">Write NDEF Text</div>
+    <div class="value">
+      <button class="pill" onclick="writeText()">Write</button>
+    </div>
+  </div>
+  <div class="small muted">Writes A Simple NDEF Text Record To A Writable Type 2 Tag. (Classic Fallback Uses Common Keys)</div>
+  <input id="ndefText" style="width:100%; margin-top:10px;" placeholder="Hello From Pi Zero" />
+  <div class="small muted" id="writeStatus" style="margin-top:10px;">-</div>
+</div>
+
+<div class="card">
+  <div class="row">
+    <div class="label">Write NDEF URL (Open URL)</div>
+    <div class="value">
+      <button class="pill" onclick="writeUrl()">Write</button>
+    </div>
+  </div>
+  <div class="small muted">Writes A Single NDEF URI Record (No NFC Tools / NFC Tasks AAR Breadcrumbs).</div>
+  <input id="ndefUrl" style="width:100%; margin-top:10px;" placeholder="http://wireless-lab.local/" />
+  <div class="small muted" id="writeUrlStatus" style="margin-top:10px;">-</div>
+</div>
+
+<div class="card">
+  <div class="row">
+    <div class="label">MIFARE Classic Tools (Best-Effort)</div>
+    <div class="value">
+      <button class="pill" onclick="dumpClassic()">Dump</button>
+      <button class="pill" onclick="wipeClassic()">Wipe</button>
+    </div>
+  </div>
+
+  <div class="small muted">
+    These Only Touch Sectors That Authenticate With Common Keys. Dump Skips Trailer Blocks By Default.
+  </div>
+
+  <div class="row" style="margin-top:10px;">
+    <div class="label">Include Trailers (Dump)</div>
+    <div class="value" style="font-weight:400;">
+      <input type="checkbox" id="classicIncludeTrailers" />
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label">Reset Keys (Wipe)</div>
+    <div class="value" style="font-weight:400;">
+      <input type="checkbox" id="classicResetKeys" checked />
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label">Wipe Data (Wipe)</div>
+    <div class="value" style="font-weight:400;">
+      <input type="checkbox" id="classicWipeData" checked />
+    </div>
+  </div>
+
+  <div class="small muted" id="classicStatus" style="margin-top:10px;">-</div>
+</div>
+
+<script>
+  async function apiGet(url) {
+    const res = await fetch(url, { cache: 'no-store' });
+    return await res.json();
+  }
+
+  async function apiPost(url, data) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data || {})
+    });
+    return await res.json();
+  }
+
+  function showJson(elId, obj) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.textContent = JSON.stringify(obj, null, 2);
+  }
+
+  async function refreshStatus() {
+    const r = await apiGet('/api/nfc/status');
+    const el = document.getElementById('fwInfo');
+    if (el) el.textContent = JSON.stringify(r, null, 2);
+  }
+
+  async function scanOnce() {
+    document.getElementById('scanStatus').textContent = 'Scanning...';
+    const r = await apiGet('/api/nfc/scan');
+    document.getElementById('scanStatus').textContent =
+      r.ok ? (r.found ? 'Found Tag' : 'No Tag') : ('Error: ' + (r.error || 'Unknown'));
+    showJson('scanOut', r);
+  }
+
+  async function probe() {
+    document.getElementById('scanStatus').textContent = 'Probing...';
+    const r = await apiGet('/api/nfc/probe');
+    document.getElementById('scanStatus').textContent =
+      r.ok ? (r.found ? ('Probe OK (riskScore=' + r.riskScore + ')') : 'No Tag') : ('Error: ' + (r.error || 'Unknown'));
+    showJson('scanOut', r);
+  }
+
+  async function readNdef() {
+    const st = document.getElementById('readStatus');
+    if (st) st.textContent = 'Reading...';
+    const r = await apiGet('/api/nfc/readNdef');
+    if (st) st.textContent = r.ok ? (r.hasNdef ? 'NDEF Found' : 'No NDEF') : ('Error: ' + (r.error || 'Unknown'));
+    showJson('scanOut', r);
+  }
+
+  async function writeText() {
+    document.getElementById('writeStatus').textContent = 'Writing...';
+    const text = document.getElementById('ndefText').value || '';
+    const r = await apiPost('/api/nfc/writeNdefText', { text: text, language: 'en' });
+    document.getElementById('writeStatus').textContent =
+      r.ok ? ('OK' + (r.tagFamily ? (' (' + r.tagFamily + ')') : '')) : ('Error: ' + (r.error || 'Unknown'));
+    showJson('scanOut', r);
+  }
+
+  async function writeUrl() {
+    document.getElementById('writeUrlStatus').textContent = 'Writing...';
+    const url = document.getElementById('ndefUrl').value || '';
+    const r = await apiPost('/api/nfc/writeNdefUrl', { url: url });
+    document.getElementById('writeUrlStatus').textContent =
+      r.ok ? ('OK' + (r.tagFamily ? (' (' + r.tagFamily + ')') : '')) : ('Error: ' + (r.error || 'Unknown'));
+    showJson('scanOut', r);
+  }
+
+  async function dumpClassic() {
+    const st = document.getElementById('classicStatus');
+    if (st) st.textContent = 'Dumping...';
+    const includeTrailers = !!document.getElementById('classicIncludeTrailers').checked;
+    const r = await apiPost('/api/nfc/dumpClassic', { includeTrailers: includeTrailers });
+    if (st) st.textContent = r.ok ? (r.found ? 'Dump OK' : 'No Tag') : ('Error: ' + (r.error || 'Unknown'));
+    showJson('scanOut', r);
+  }
+
+  async function wipeClassic() {
+    const st = document.getElementById('classicStatus');
+    if (st) st.textContent = 'Wiping...';
+    const resetKeys = !!document.getElementById('classicResetKeys').checked;
+    const wipeData  = !!document.getElementById('classicWipeData').checked;
+    const r = await apiPost('/api/nfc/wipeClassic', { resetKeys: resetKeys, wipeData: wipeData });
+    if (st) st.textContent = r.ok ? (r.found ? 'Wipe OK' : 'No Tag') : ('Error: ' + (r.error || 'Unknown'));
+    showJson('scanOut', r);
+  }
+
+  refreshStatus();
+</script>
