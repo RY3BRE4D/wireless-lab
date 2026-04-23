@@ -1,0 +1,60 @@
+<div class="card">
+  <div class="small muted">
+    Toggle Features On/Off. Changes Save To <span class="mono">config/features.json</span>.<br>
+    <b>Restart Required</b> To Fully Apply Route/Manager Changes (Because systemd boots the app once).
+  </div>
+</div>
+
+{% for mod in modules %}
+<div class="card">
+  <div class="row">
+    <div class="label">{{ mod.label }}</div>
+    <div class="value">
+      <input type="checkbox" id="t_{{ mod.key }}" {% if mod.enabled %}checked{% endif %} />
+    </div>
+  </div>
+  <div class="small muted">{{ mod.desc }}</div>
+</div>
+{% endfor %}
+
+<div class="card">
+  <div class="row">
+    <div class="label">Save</div>
+    <div class="value">
+      <button class="pill" onclick="saveModules()">Save</button>
+    </div>
+  </div>
+  <div class="small muted" id="saveStatus">-</div>
+</div>
+
+<script>
+  async function apiPost(url, data) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data || {})
+    });
+    return await res.json();
+  }
+
+  async function saveModules() {
+    const payload = {
+      stats: document.getElementById('t_stats').checked,
+      ir: document.getElementById('t_ir').checked,
+      rfid_mfrc522: document.getElementById('t_rfid_mfrc522').checked,
+      nfc_pn532: document.getElementById('t_nfc_pn532').checked,
+      wifi: document.getElementById('t_wifi').checked
+    };
+
+    document.getElementById('saveStatus').textContent = 'Saving...';
+    const r = await apiPost('/api/modules/save', payload);
+
+    if (r.ok) {
+      document.getElementById('saveStatus').textContent =
+        'Saved. Restart Required: sudo systemctl restart webUI.service';
+    } else {
+      document.getElementById('saveStatus').textContent =
+        'Save Error: ' + (r.error || 'Unknown');
+    }
+  }
+</script>

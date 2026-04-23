@@ -1,0 +1,64 @@
+<div class="small" id="status">Loading...</div>
+
+<div class="card">
+  <div class="row"><div class="label">CPU Usage</div><div class="value" id="cpuPercent">-</div></div>
+  <div class="row"><div class="label">CPU Temp</div><div class="value" id="cpuTemp">-</div></div>
+</div>
+
+<div class="card">
+  <div class="row"><div class="label">RAM</div><div class="value" id="ram">-</div></div>
+  <div class="row"><div class="label">Disk</div><div class="value" id="disk">-</div></div>
+</div>
+
+<div class="card">
+  <div class="row"><div class="label">Uptime</div><div class="value" id="uptime">-</div></div>
+</div>
+
+<div class="card">
+  <div class="row"><div class="label">Hostname :</div><div class="value" id="netHostname">-</div></div>
+  <div class="row"><div class="label">SSH      :</div><div class="value mono" id="netSsh">-</div></div>
+  <div class="row"><div class="label">Interface:</div><div class="value" id="netInterface">-</div></div>
+  <div class="row"><div class="label">IP Addr  :</div><div class="value mono" id="netIp">-</div></div>
+  <div class="row"><div class="label">SSID     :</div><div class="value" id="netSsid">-</div></div>
+  <div class="row"><div class="label">Signal   :</div><div class="value" id="netSignal">-</div></div>
+  <div class="row"><div class="label">Gateway  :</div><div class="value mono" id="netGateway">-</div></div>
+  <div class="row"><div class="label">Internet :</div><div class="value" id="netInternet">-</div></div>
+</div>
+
+<script>
+  function setText(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = (val === undefined || val === null || val === '') ? '-' : val;
+  }
+
+  async function refreshStats() {
+    try {
+      const res = await fetch('/api/stats', { cache: 'no-store' });
+      const s = await res.json();
+
+      setText('cpuPercent', s.cpuPercent.toFixed(1) + '%');
+      setText('cpuTemp', (s.cpuTempC === null) ? 'N/A' : s.cpuTempC.toFixed(1) + ' °C');
+      setText('ram', s.ramPercent.toFixed(1) + '% (' + s.ramUsedMb + ' / ' + s.ramTotalMb + ' MB)');
+      setText('disk', s.diskPercent.toFixed(1) + '% (' + s.diskUsedGb + ' / ' + s.diskTotalGb + ' GB)');
+      setText('uptime', s.bootMinutes.toFixed(1) + ' minutes');
+
+      const n = s.net || {};
+      setText('netHostname', n.hostname);
+      setText('netSsh', n.ssh);
+      setText('netInterface', n.interface);
+      setText('netIp', n.ipAddr);
+      setText('netSsid', n.ssid);
+      setText('netSignal', n.signal);
+      setText('netGateway', n.gateway);
+      setText('netInternet', n.internet);
+
+      document.getElementById('status').textContent = 'OK';
+    } catch (e) {
+      document.getElementById('status').textContent = 'Error: ' + e;
+    }
+  }
+
+  refreshStats();
+  setInterval(refreshStats, 1500);
+</script>
