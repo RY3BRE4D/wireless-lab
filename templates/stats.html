@@ -62,3 +62,32 @@
   refreshStats();
   setInterval(refreshStats, 1500);
 </script>
+
+<div class="card">
+  <div class="row">
+    <div class="label">Power</div>
+    <div style="display:flex;gap:8px;">
+      <button class="pill" onclick="handleRestart()" id="btnRestart">Restart</button>
+      <button class="pill" onclick="handleShutdown()" id="btnShutdown" style="border-color:#c0392b;color:#c0392b;">Shutdown</button>
+    </div>
+  </div>
+  <div class="small muted" id="powerStatus" style="margin-top:6px;"></div>
+</div>
+
+<script>
+  async function handleRestart() {
+    if (!confirm("Restart the Pi now?")) return;
+    document.getElementById("btnRestart").disabled = true;
+    document.getElementById("btnShutdown").disabled = true;
+    document.getElementById("powerStatus").textContent = "Restarting… reconnect in ~30 seconds.";
+    await fetch("/api/system/restart", { method: "POST" });
+  }
+
+  async function handleShutdown() {
+    if (!confirm("Shut down the Pi now?")) return;
+    document.getElementById("btnRestart").disabled = true;
+    document.getElementById("btnShutdown").disabled = true;
+    document.getElementById("powerStatus").textContent = "Shutting down…";
+    await fetch("/api/system/shutdown", { method: "POST" });
+  }
+</script>
