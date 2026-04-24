@@ -1,4 +1,5 @@
 import os
+import subprocess
 from flask import Flask, jsonify, request, render_template, redirect, url_for
 from modules.wifiManager import (
     getCurrentStatus,
@@ -93,6 +94,16 @@ if isEnabled(features, "stats"):
     @app.get("/api/stats")
     def apiStats():
         return jsonify(getStats())
+
+    @app.post("/api/system/restart")
+    def apiSystemRestart():
+        subprocess.Popen(["sudo", "systemctl", "reboot"])
+        return jsonify({"ok": True})
+
+    @app.post("/api/system/shutdown")
+    def apiSystemShutdown():
+        subprocess.Popen(["sudo", "systemctl", "poweroff"])
+        return jsonify({"ok": True})
 
 # ---------- IR Routes/API ----------
 
