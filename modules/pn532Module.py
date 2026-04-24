@@ -446,6 +446,7 @@ class PN532Module:
 		self,
 		uid: bytes,
 		keys: Optional[List[Tuple[str, bytes]]] = None,
+		startSector: int = 0,
 	) -> Dict[str, Any]:
 		"""
 		Best-Effort: Read Data Blocks (Not Trailers) For All Sectors We Can Auth.
@@ -464,7 +465,7 @@ class PN532Module:
 		blocksHex: Dict[int, str] = {}
 		data = bytearray()
 
-		for sector in range(16):
+		for sector in range(startSector, 16):
 			firstBlock = sector * 4
 			trailerBlock = firstBlock + 3
 
@@ -554,7 +555,10 @@ class PN532Module:
 		Best-Effort: Authenticate With Common Keys Per Sector And Search For NDEF TLV (0x03).
 		This Does NOT Guarantee Success If The Card Uses Unknown Keys.
 		"""
-		readRes = self._classicReadAllDataBlocksBestEffort(uid=uid)
+		# Sector 0 block 0 is always the manufacturer block (UID/SAK/ATQA).
+		# Its bytes are not TLV data and will corrupt the TLV parser if included.
+		# NDEF on MIFARE Classic is always stored in sector 1+.
+		readRes = self._classicReadAllDataBlocksBestEffort(uid=uid, startSector=1)
 		if not readRes.get("ok"):
 			return readRes
 
@@ -654,6 +658,11 @@ class PN532Module:
 			hasType2 = hasattr(self._pn532, "ntag2xx_read_block")
 
 			try:
+				# Select tag first — ntag2xx_read_block requires an active target
+				uid = self._pn532.read_passive_target(timeout=2.0)
+				if uid is None:
+					return {"ok": True, "hasNdef": False}
+
 				# ----------------------------
 				# Try Type 2 Path First (If Available)
 				# ----------------------------
@@ -725,10 +734,6 @@ class PN532Module:
 				# ----------------------------
 				# Fallback: MIFARE Classic Best-Effort
 				# ----------------------------
-				uid = self._pn532.read_passive_target(timeout=0.20)
-				if uid is None:
-					return {"ok": True, "hasNdef": False}
-
 				return self._tryReadMifareClassicNdef(uid)
 
 			except Exception as e:
