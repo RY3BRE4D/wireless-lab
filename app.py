@@ -62,7 +62,7 @@ def home():
         showNfc=isEnabled(features, "nfc_pn532"),
         showWifi=isEnabled(features, "wifi"),
     )
-    return renderPage("Pi Zero Lab", body, features=features)
+    return renderPage("Pi Lab", body, features=features)
 
 @app.get("/modules")
 def modulesPage():
@@ -74,12 +74,12 @@ def modulesPage():
         {"key": "wifi",         "label": "WiFi",           "desc": "Scan + Connect + Saved Profiles + Setup AP",                      "enabled": isEnabled(features, "wifi")},
     ]
     body = render_template("modules.html", modules=modules)
-    return renderPage("Pi Zero Lab - Modules", body, features=features)
+    return renderPage("Pi Lab - Modules", body, features=features)
 
 @app.get("/pinout")
 def pinoutPage():
     body = render_template("pinout.html")
-    return renderPage("Pi Zero Lab - Pinout", body, features=features)
+    return renderPage("Pi Lab - Pinout", body, features=features)
 
 # ---------- Stats Routes/API ----------
 
@@ -88,7 +88,7 @@ if isEnabled(features, "stats"):
     @app.get("/stats")
     def statsPage():
         body = render_template("stats.html")
-        return renderPage("Pi Zero Lab - Stats", body, features=features)
+        return renderPage("Pi Lab - Stats", body, features=features)
 
     @app.get("/api/stats")
     def apiStats():
@@ -101,7 +101,7 @@ if isEnabled(features, "ir"):
     @app.get("/ir")
     def irPage():
         body = render_template("ir.html")
-        return renderPage("Pi Zero Lab - IR", body, features=features)
+        return renderPage("Pi Lab - IR", body, features=features)
 
     @app.get("/api/ir/status")
     def apiIrStatus():
@@ -161,7 +161,7 @@ if isEnabled(features, "nfc_pn532"):
     @app.get("/nfc")
     def nfcPage():
         body = render_template("nfc.html")
-        return renderPage("Pi Zero Lab - NFC (PN532)", body, features=features)
+        return renderPage("Pi Lab - NFC (PN532)", body, features=features)
 
     @app.get("/api/nfc/status")
     def apiNfcStatus():
@@ -257,7 +257,7 @@ if isEnabled(features, "wifi"):
             message=message,
         )
 
-        return renderPage("Pi Zero Lab - WiFi", body, features=features)
+        return renderPage("Pi Lab - WiFi", body, features=features)
 
     @app.post("/wifi/connect")
     def wifiConnect():
