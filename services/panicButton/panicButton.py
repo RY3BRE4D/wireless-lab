@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import signal
 import time
 import subprocess
 import threading
@@ -169,6 +170,16 @@ class OledUi:
             # Do Not Kill Panic Button If OLED Misbehaves
             self.ready = False
             log(f"OLED Disabled (Render Failed): {e}")
+
+    def blank(self):
+        if not self.ready:
+            return
+        try:
+            self.ready = False
+            time.sleep(0.05)
+            self.device.hide()
+        except Exception:
+            pass
 
 def getHostname():
     rc, out, _ = runCmd(["hostname"])
@@ -377,6 +388,15 @@ def main():
     oled.init()
     global oledRef
     oledRef = oled
+
+    def handleShutdown(signum, frame):
+        log("Shutdown signal received - blanking OLED")
+        if oledRef and oledRef.ready:
+            oledRef.blank()
+        raise SystemExit(0)
+
+    signal.signal(signal.SIGTERM, handleShutdown)
+    signal.signal(signal.SIGINT, handleShutdown)
 
     # If oledEnabled Is Set To False, The Program Will Continue Without OLED And Related Functions/Modules
     if oled.ready:
