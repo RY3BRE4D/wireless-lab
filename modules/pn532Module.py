@@ -278,7 +278,7 @@ class PN532Module:
 		return [
 			# Factory Default (Most Common)
 			("FFFFFFFFFFFF", bytes([0xFF] * 6)),
-			# All zeros
+			# All Zeros
 			("000000000000", bytes([0x00] * 6)),
 			## NXP Transport Key (MAD)
 			("A0A1A2A3A4A5", bytes([0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5])),
@@ -302,7 +302,7 @@ class PN532Module:
 
 	def _crc8Mad(self, data: bytes) -> int:
 		"""
-		CRC-8 For MAD (Polynomial 0x1D, Init 0xC7) used by MIFARE Classic MAD.
+		CRC-8 For MAD (Polynomial 0x1D, Init 0xC7) Used By MIFARE Classic MAD.
 		"""
 		crc = 0xC7
 		for b in data:
@@ -316,17 +316,17 @@ class PN532Module:
 
 	def _classicBuildMad1(self, aid: int = 0x03E1, infoByte: int = 0x01):
 		"""
-		Build MAD1 blocks for a 1K tag.
-		- block1[0] = CRC8 over (block1[1:16] + block2[0:16])
+		Build MAD1 Blocks For A 1K Tag.
+		- block1[0] = CRC8 Over (block1[1:16] + block2[0:16])
 		- block1[1] = infoByte
-		- AIDs for sectors 1..15 are stored little-endian.
+		- AIDs For Sectors 1..15 Are Stored Little-Endian.
 		"""
 		aidLo = aid & 0xFF
 		aidHi = (aid >> 8) & 0xFF
 
 		aidBytes = bytearray()
 		for _ in range(15):
-			aidBytes += bytes([aidLo, aidHi])  # sectors 1..15
+			aidBytes += bytes([aidLo, aidHi])  # Sectors 1..15
 
 		b1 = bytearray([0x00] * 16)
 		b2 = bytearray([0x00] * 16)
@@ -340,9 +340,9 @@ class PN532Module:
 
 	def _classicFormatForNdefMad1(self, uid: bytes) -> Dict[str, Any]:
 		"""
-		Format MIFARE Classic 1K for NFC Forum NDEF:
-		- Sector 0: write MAD1 (blocks 1-2) and set sector 0 trailer (MAD key/access)
-		- Sectors 1-15: set trailers to NFC/NDEF readable settings
+		Format MIFARE Classic 1K For NFC Forum NDEF:
+		- Sector 0: Write MAD1 (Blocks 1-2) And Set Sector 0 Trailer (MAD Key/Access)
+		- Sectors 1-15: Set Trailers To NFC/NDEF Readable Settings
 		"""
 		if self._pn532 is None:
 			return {"ok": False, "error": "PN532 Not Initialized"}
@@ -362,30 +362,30 @@ class PN532Module:
 		MIFARE_CMD_AUTH_B = 0x61
 		MIFARE_CMD_AUTH_A = 0x60
 
-		# Auth sector 0 with default Key B (FF..)
+		# Auth Sector 0 With Default Key B (FF..)
 		if not self._pn532.mifare_classic_authenticate_block(uid, 1, MIFARE_CMD_AUTH_B, keyB):
-			return {"ok": False, "error": "Auth failed on sector 0 (KeyB FF..). Card may be locked."}
+			return {"ok": False, "error": "Auth Failed On Sector 0 (KeyB FF..). Card May Be Locked."}
 
 		madB1, madB2 = self._classicBuildMad1(aid=0x03E1, infoByte=0x01)
 		if not self._pn532.mifare_classic_write_block(1, madB1):
-			return {"ok": False, "error": "Write failed (sector0 block1 MAD1)"}
+			return {"ok": False, "error": "Write Failed (Sector 0 Block 1 MAD1)"}
 		if not self._pn532.mifare_classic_write_block(2, madB2):
-			return {"ok": False, "error": "Write failed (sector0 block2 MAD1)"}
+			return {"ok": False, "error": "Write Failed (Sector 0 Block 2 MAD1)"}
 
-		# Sector 0 trailer
+		# Sector 0 Trailer
 		madTrailer = bytes(madKeyA + madAccess + bytes([madGPB]) + keyB)
 		if not self._pn532.mifare_classic_write_block(3, madTrailer):
-			return {"ok": False, "error": "Write failed (sector0 trailer)"}
+			return {"ok": False, "error": "Write Failed (Sector 0 Trailer)"}
 
-		# NFC sectors trailers (1..15)
+		# NFC Sector Trailers (1..15)
 		ndefTrailer = bytes(ndefKeyA + ndefAccess + bytes([ndefGPB]) + keyB)
 
 		for sector in range(1, 16):
 			trailerBlock = sector * 4 + 3
 			if not self._pn532.mifare_classic_authenticate_block(uid, trailerBlock, MIFARE_CMD_AUTH_B, keyB):
-				return {"ok": False, "error": f"Auth failed on sector {sector} trailer (KeyB FF..)."}
+				return {"ok": False, "error": f"Auth Failed On Sector {sector} Trailer (KeyB FF..)."}
 			if not self._pn532.mifare_classic_write_block(trailerBlock, ndefTrailer):
-				return {"ok": False, "error": f"Write failed on sector {sector} trailer."}
+				return {"ok": False, "error": f"Write Failed On Sector {sector} Trailer."}
 
 		return {"ok": True, "formatted": True}
 
@@ -398,7 +398,7 @@ class PN532Module:
 		"""
 		Best-Effort: Find A Working Key For A Sector.
 		Returns { keyName, keyType, keyBytes, authCmd } Or None.
-		authCmd is the exact value that succeeded (driver-dependent).
+		authCmd Is The Exact Value That Succeeded (Driver-Dependent).
 		"""
 		if keys is None:
 			keys = self._classicCommonKeys()
@@ -406,12 +406,12 @@ class PN532Module:
 		if not hasattr(self._pn532, "mifare_classic_authenticate_block"):
 			return None
 
-		# Some PN532 Python libs expect:
-		# - Key A/B as 0x60/0x61 (MIFARE auth commands)
-		# Others expect:
-		# - Key A/B as 0/1
+		# Some PN532 Python Libs Expect:
+		# - Key A/B As 0x60/0x61 (MIFARE Auth Commands)
+		# Others Expect:
+		# - Key A/B As 0/1
 		#
-		# We'll try both to be compatible.
+		# We'll Try Both To Be Compatible.
 		AUTH_VARIANTS = [
 			("A", 0x60),
 			("A", 0),
@@ -419,9 +419,9 @@ class PN532Module:
 			("B", 1),
 		]
 
-		# Auth against a safe block in the sector.
-		# Block 0 is manufacturer, but auth should still work there.
-		# Still, using block 1 for sector 0 avoids edge-case driver weirdness.
+		# Auth Against A Safe Block In The Sector.
+		# Block 0 Is Manufacturer, But Auth Should Still Work There.
+		# Still, Using Block 1 For Sector 0 Avoids Edge-Case Driver Weirdness.
 		firstBlock = sector * 4
 		authBlock = (firstBlock + 1) if sector == 0 else firstBlock
 
@@ -434,7 +434,7 @@ class PN532Module:
 				except Exception:
 					pass
 
-				# Reselect after failure
+				# Reselect After Failure
 				try:
 					self._pn532.read_passive_target(timeout=0.05)
 				except Exception:
@@ -534,17 +534,17 @@ class PN532Module:
 					continue
 
 				first = data[valueStart]
-				looksLikeRecordHeader = (first & 0x80) != 0  # MB bit
+				looksLikeRecordHeader = (first & 0x80) != 0  # MB Bit
 				notGarbage = first not in (0x00, 0x03, 0xE1, 0xFE)
 
 				if looksLikeRecordHeader and notGarbage:
 					return valueStart, tlvLen
 
-				# Skip this TLV and keep scanning
+				# Skip This TLV And Keep Scanning
 				i += 1
 				continue
 
-			# Other TLVs: skip
+			# Other TLVs: Skip
 			i = valueEnd
 
 		return None, None
@@ -555,9 +555,9 @@ class PN532Module:
 		Best-Effort: Authenticate With Common Keys Per Sector And Search For NDEF TLV (0x03).
 		This Does NOT Guarantee Success If The Card Uses Unknown Keys.
 		"""
-		# Sector 0 block 0 is always the manufacturer block (UID/SAK/ATQA).
-		# Its bytes are not TLV data and will corrupt the TLV parser if included.
-		# NDEF on MIFARE Classic is always stored in sector 1+.
+		# Sector 0 Block 0 Is Always The Manufacturer Block (UID/SAK/ATQA).
+		# Its Bytes Are Not TLV Data And Will Corrupt The TLV Parser If Included.
+		# NDEF On MIFARE Classic Is Always Stored In Sector 1+.
 		readRes = self._classicReadAllDataBlocksBestEffort(uid=uid, startSector=1)
 		if not readRes.get("ok"):
 			return readRes
@@ -658,7 +658,7 @@ class PN532Module:
 			hasType2 = hasattr(self._pn532, "ntag2xx_read_block")
 
 			try:
-				# Select tag first — ntag2xx_read_block requires an active target
+				# Select Tag First — ntag2xx_read_block Requires An Active Target
 				uid = self._pn532.read_passive_target(timeout=2.0)
 				if uid is None:
 					return {"ok": True, "hasNdef": False}
@@ -729,7 +729,7 @@ class PN532Module:
 							}
 
 						except Exception as e:
-							return {"ok": False, "error": f"NDEF decode failed: {e}"}
+							return {"ok": False, "error": f"NDEF Decode Failed: {e}"}
 
 				# ----------------------------
 				# Fallback: MIFARE Classic Best-Effort
@@ -747,14 +747,14 @@ class PN532Module:
 		"""
 		with self._lock:
 			if self._pn532 is None:
-				return {"ok": False, "error": "PN532 not initialized"}
+				return {"ok": False, "error": "PN532 Not Initialized"}
 
 			# Build NDEF Message
 			textRec = ndef.TextRecord(text, language=language)
 			rawMsg = b"".join(ndef.message_encoder([textRec]))
 
 			if len(rawMsg) > 0xFE:
-				return {"ok": False, "error": "NDEF message too long"}
+				return {"ok": False, "error": "NDEF Message Too Long"}
 
 			# Wrap In TLV
 			tlv = bytearray()
@@ -771,21 +771,21 @@ class PN532Module:
 					# Type 2 CC Check
 					cc = self._pn532.ntag2xx_read_block(3)
 					if not (cc is not None and len(cc) > 0 and cc[0] == 0xE1):
-						raise Exception("Not a Type 2 tag (CC page 3 does not start with 0xE1)")
+						raise Exception("Not A Type 2 Tag (CC Page 3 Does Not Start With 0xE1)")
 
-					# CC[2] is size in 8-byte units for Type 2 tags
-					# This is the size of the data area starting at page 4
+					# CC[2] Is Size In 8-Byte Units For Type 2 Tags
+					# This Is The Size Of The Data Area Starting At Page 4
 					dataBytes = cc[2] * 8
 
-					# Check BEFORE padding (padding is just for page alignment)
+					# Check BEFORE Padding (Padding Is Just For Page Alignment)
 					tlvLenUnpadded = len(tlv)
 					if tlvLenUnpadded > dataBytes:
 						return {
 							"ok": False,
-							"error": f"NDEF too large for Type 2 tag (need {tlvLenUnpadded} bytes, tag has {dataBytes} bytes)",
+							"error": f"NDEF Too Large For Type 2 Tag (Need {tlvLenUnpadded} Bytes, Tag Has {dataBytes} Bytes)",
 						}
 
-					# Pad To 4 Bytes (page writes)
+					# Pad To 4 Bytes (Page Writes)
 					while len(tlv) % 4 != 0:
 						tlv.append(0x00)
 
@@ -795,13 +795,13 @@ class PN532Module:
 						chunk = bytes(tlv[i : i + 4])
 						ok = self._pn532.ntag2xx_write_block(page, chunk)
 						if not ok:
-							raise Exception(f"Type2 write failed at page {page}")
+							raise Exception(f"Type2 Write Failed At Page {page}")
 						page += 1
 
-					# Read-back verify (simple)
+					# Read-Back Verify (Simple)
 					verify = self._pn532.ntag2xx_read_block(4)
 					if verify is None:
-						raise Exception("Type2 verify read failed at page 4")
+						raise Exception("Type2 Verify Read Failed At Page 4")
 
 					return {"ok": True, "tagFamily": "Type 2 (NTAG/Ultralight-Like)"}
 
@@ -821,8 +821,8 @@ class PN532Module:
 				if uid is None:
 					return {"ok": False, "error": "No Tag"}
 
-				# We Write TLV Into Sector 1 (Blocks 4,5,6). Trailer Is Block 7.
-				# Example (0x03, len, NDEF..., 0xFE).
+				# We Write TLV Into Sector 1 (Blocks 4, 5, 6). Trailer Is Block 7.
+				# Example: (0x03, len, NDEF..., 0xFE).
 				sector = 1
 				authInfo = self._classicAuthSectorBestEffort(uid=uid, sector=sector)
 				if not authInfo:
@@ -862,17 +862,17 @@ class PN532Module:
 		if not uri:
 			return {"ok": False, "error": "Missing URI"}
 
-		# Add scheme if missing
+		# Add Scheme If Missing
 		if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", uri):
 			uri = "http://" + uri
 
-		# Build NDEF message (single URI record; no AAR)
+		# Build NDEF Message (Single URI Record; No AAR)
 		try:
 			msg = b"".join(ndef.message_encoder([ndef.UriRecord(uri)]))
 		except Exception as e:
-			return {"ok": False, "error": f"NDEF encode failed: {e}"}
+			return {"ok": False, "error": f"NDEF Encode Failed: {e}"}
 
-		# TLV: 03 len <msg> FE (handle long lengths too)
+		# TLV: 03 len <msg> FE (Handle Long Lengths Too)
 		tlv = bytearray([0x03])
 		if len(msg) < 0xFF:
 			tlv.append(len(msg) & 0xFF)
@@ -887,7 +887,7 @@ class PN532Module:
 			if self._pn532 is None:
 				return {"ok": False, "error": "PN532 Not Initialized"}
 
-			# --- Type 2 path: CC CHECK + WRITE ---
+			# --- Type 2 Path: CC Check + Write ---
 			if hasattr(self._pn532, "ntag2xx_write_block") and hasattr(self._pn532, "ntag2xx_read_block"):
 				try:
 					cc = self._pn532.ntag2xx_read_block(3)
@@ -895,19 +895,19 @@ class PN532Module:
 						raise Exception("Not Type 2")
 					dataBytes = cc[2] * 8
 					if len(tlv) > dataBytes:
-						return {"ok": False, "error": f"NDEF too large (need {len(tlv)} bytes, tag has {dataBytes} bytes)"}
+						return {"ok": False, "error": f"NDEF Too Large (Need {len(tlv)} Bytes, Tag Has {dataBytes} Bytes)"}
 					while len(tlv) % 4 != 0:
 						tlv.append(0x00)
 					page = 4
 					for i in range(0, len(tlv), 4):
 						if not self._pn532.ntag2xx_write_block(page, bytes(tlv[i:i+4])):
-							return {"ok": False, "error": f"Type2 write failed at page {page}"}
+							return {"ok": False, "error": f"Type2 Write Failed At Page {page}"}
 						page += 1
 					return {"ok": True, "tagFamily": "Type 2", "uri": uri}
 				except Exception:
-					pass  # fall through to Classic
+					pass  # Fall Through To Classic
 
-			# --- Classic path: FORMAT FIRST, THEN WRITE ---
+			# --- Classic Path: Format First, Then Write ---
 			if not hasattr(self._pn532, "mifare_classic_write_block") or not hasattr(self._pn532, "mifare_classic_authenticate_block"):
 				return {"ok": False, "error": "No Classic Write Support"}
 
@@ -919,10 +919,10 @@ class PN532Module:
 			if not fmt.get("ok"):
 				return fmt
 
-			# Classic 1K NDEF capacity (sectors 1..15, 3 data blocks each): 720 bytes
+			# Classic 1K NDEF Capacity (Sectors 1..15, 3 Data Blocks Each): 720 Bytes
 			capacity = 15 * 3 * 16
 			if len(tlv) > capacity:
-				return {"ok": False, "error": f"NDEF too large for Classic 1K (need {len(tlv)} bytes, has {capacity} bytes)"}
+				return {"ok": False, "error": f"NDEF Too Large For Classic 1K (Need {len(tlv)} Bytes, Has {capacity} Bytes)"}
 
 			while len(tlv) % 16 != 0:
 				tlv.append(0x00)
@@ -936,17 +936,17 @@ class PN532Module:
 				trailerBlock = firstBlock + 3
 
 				if not self._pn532.mifare_classic_authenticate_block(uid, firstBlock, MIFARE_CMD_AUTH_A, ndefKeyA):
-					return {"ok": False, "error": f"Auth failed on sector {sector} (NDEF KeyA)"}
+					return {"ok": False, "error": f"Auth Failed On Sector {sector} (NDEF KeyA)"}
 
-				for b in range(firstBlock, trailerBlock):  # 3 data blocks
+				for b in range(firstBlock, trailerBlock):  # 3 Data Blocks
 					chunk = bytes(tlv[offset:offset+16])
 					if not self._pn532.mifare_classic_write_block(b, chunk):
-						return {"ok": False, "error": f"Write failed at block {b}"}
+						return {"ok": False, "error": f"Write Failed At Block {b}"}
 					offset += 16
 					if offset >= len(tlv):
 						return {"ok": True, "tagFamily": "MIFARE Classic (NDEF)", "uri": uri}
 
-			return {"ok": False, "error": "Unexpected: ran out of sectors"}         
+			return {"ok": False, "error": "Unexpected: Ran Out Of Sectors"}
 
 	# ----------------------------
 	# Classic Dump / Wipe (Best-Effort)

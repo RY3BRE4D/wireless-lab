@@ -390,7 +390,7 @@ def main():
     oledRef = oled
 
     def handleShutdown(signum, frame):
-        log("Shutdown signal received - blanking OLED")
+        log("Shutdown Signal Received - Blanking OLED")
         if oledRef and oledRef.ready:
             oledRef.blank()
         raise SystemExit(0)

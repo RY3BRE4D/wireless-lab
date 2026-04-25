@@ -68,10 +68,10 @@ def home():
 @app.get("/modules")
 def modulesPage():
     modules = [
-        {"key": "stats",        "label": "Stats",          "desc": "psutil-based CPU/RAM/Disk/Uptime UI",                            "enabled": isEnabled(features, "stats")},
-        {"key": "ir",           "label": "IR",             "desc": "RAW capture (ir-ctl) + decoded capture (ir-keytable) + send RAW", "enabled": isEnabled(features, "ir")},
-        {"key": "rfid_mfrc522", "label": "RFID (MFRC522)", "desc": "SPI RC522 reader (kept disabled until you need it)",              "enabled": isEnabled(features, "rfid_mfrc522")},
-        {"key": "nfc_pn532",    "label": "NFC (PN532)",    "desc": "I2C PN532: classify + probe + NDEF read/write",                   "enabled": isEnabled(features, "nfc_pn532")},
+        {"key": "stats",        "label": "Stats",          "desc": "psutil-Based CPU/RAM/Disk/Uptime UI",                             "enabled": isEnabled(features, "stats")},
+        {"key": "ir",           "label": "IR",             "desc": "RAW Capture (ir-ctl) + Decoded Capture (ir-keytable) + Send RAW", "enabled": isEnabled(features, "ir")},
+        {"key": "rfid_mfrc522", "label": "RFID (MFRC522)", "desc": "SPI RC522 Reader (Kept Disabled Until You Need It)",              "enabled": isEnabled(features, "rfid_mfrc522")},
+        {"key": "nfc_pn532",    "label": "NFC (PN532)",    "desc": "I2C PN532: Classify + Probe + NDEF Read/Write",                   "enabled": isEnabled(features, "nfc_pn532")},
         {"key": "wifi",         "label": "WiFi",           "desc": "Scan + Connect + Saved Profiles + Setup AP",                      "enabled": isEnabled(features, "wifi")},
     ]
     body = render_template("modules.html", modules=modules)
@@ -219,7 +219,7 @@ if isEnabled(features, "nfc_pn532"):
             return jsonify({"ok": False, "error": "Missing URL"})
         return jsonify(pn532.tryWriteNdefUri(uri=url))
 
-    # For making other tasks or even a custom URI writer
+    # For Making Other Tasks Or Even A Custom URI Writer
     """
     @app.post("/api/nfc/writeNdefUri")
     def apiNfcWriteNdefUri():

@@ -30,7 +30,7 @@ def _getHostname():
 
 
 def _getDefaultRouteInterfaceAndGateway():
-    # Example: "default via 10.0.0.1 dev wlan0 proto dhcp src 10.0.0.42 metric 303"
+    # Example Output: "default via 10.0.0.1 dev wlan0 proto dhcp src 10.0.0.42 metric 303"
     line = _run(["ip", "route", "show", "default"])
     if not line:
         return "", ""
@@ -49,7 +49,7 @@ def _getDefaultRouteInterfaceAndGateway():
 
 
 def _getIPv4ForInterface(iface):
-    # Example: "2: wlan0    inet 10.0.0.42/24 brd 10.0.0.255 scope global dynamic noprefixroute wlan0"
+    # Example Output: "2: wlan0    inet 10.0.0.42/24 brd 10.0.0.255 scope global dynamic noprefixroute wlan0"
     if not iface:
         return ""
     out = _run(["ip", "-o", "-4", "addr", "show", "dev", iface])
@@ -66,7 +66,7 @@ def _getIPv4ForInterface(iface):
 
 
 def _getSSID(iface):
-    # iwgetid is the simplest if available
+    # iwgetid Is The Simplest If Available
     if not iface:
         return ""
     ssid = _run(["iwgetid", "-r", iface])
@@ -74,7 +74,7 @@ def _getSSID(iface):
 
 
 def _getSignalDbm(iface):
-    # Example from: iw dev wlan0 link
+    # Example Output From `iw dev wlan0 link`:
     # "signal: -61 dBm"
     if not iface:
         return ""
@@ -85,14 +85,14 @@ def _getSignalDbm(iface):
     for line in out.splitlines():
         line = line.strip()
         if line.startswith("signal:"):
-            # "signal: -61 dBm"
+            # Example Match: "signal: -61 dBm"
             return line.replace("signal:", "").strip()
     return ""
 
 
 def _internetOk():
-    # Fast and good enough
-    # -n: numeric, -c 1: one ping, -W 1: 1s timeout
+    # Fast And Good Enough
+    # Flags: -n Numeric, -c 1 One Ping, -W 1 One Second Timeout
     try:
         subprocess.check_output(["ping", "-n", "-c", "1", "-W", "1", "1.1.1.1"], text=True, stderr=subprocess.DEVNULL, timeout=2)
         return True
@@ -103,10 +103,10 @@ def _internetOk():
 def getNetworkInfo():
     hostname = _getHostname()
 
-    # Prefer default route info
+    # Prefer Default Route Info
     iface, gateway = _getDefaultRouteInterfaceAndGateway()
 
-    # Fallback if default route missing: try common interfaces
+    # Fallback If Default Route Missing: Try Common Interfaces
     if not iface:
         for candidate in ["wlan0", "eth0", "usb0"]:
             ip = _getIPv4ForInterface(candidate)
@@ -124,7 +124,7 @@ def getNetworkInfo():
 
     internet = _internetOk()
 
-    # Format for UI
+    # Format For UI
     uiHost = _firstNonEmpty(hostname, "-") or "-"
     ssh = "Offline" if uiHost in ["-", ""] else f"ssh piradio@{uiHost}.local"
 
