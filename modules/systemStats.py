@@ -9,12 +9,12 @@ def getCpuTempC():
     # Try vcgencmd (Typical On Raspberry Pi OS)
     try:
         out = subprocess.check_output(["vcgencmd", "measure_temp"], text=True).strip()
-        # Example: temp=48.2'C
+        # Example Output: temp=48.2'C
         return float(out.split("=")[1].split("'")[0])
     except Exception:
         pass
 
-    # Fallback: sysfs thermal zone
+    # Fallback: sysfs Thermal Zone
     try:
         with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
             return float(f.read().strip()) / 1000.0

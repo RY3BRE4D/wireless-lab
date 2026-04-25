@@ -8,8 +8,8 @@ from .irInit import enableIrProtocols
 
 class IRDecodeManager:
     """
-    Uses kernel decode via: sudo ir-keytable -s rc0 -t
-    Keeps a rolling buffer of decoded lines like:
+    Uses Kernel Decode Via: sudo ir-keytable -s rc0 -t
+    Keeps A Rolling Buffer Of Decoded Lines Like:
       lirc protocol(nec): scancode = 0x45
     """
 
@@ -43,7 +43,7 @@ class IRDecodeManager:
         try:
             ok = enableIrProtocols()
             if not ok:
-                raise RuntimeError("enableIrProtocols() returned False")
+                raise RuntimeError("enableIrProtocols() Returned False")
         except Exception as e:
             with self._lock:
                 self._running = False
@@ -103,7 +103,7 @@ class IRDecodeManager:
                 if not line:
                     continue
 
-                # Filter noise if you want (optional)
+                # Filter Noise If You Want (Optional)
                 # if "imon" in line and "0x7fffffff" in line: continue
                 if "lirc protocol" not in line:
                     continue
@@ -127,12 +127,12 @@ class IRDecodeManager:
 
 class IRCaptureManager:
     """
-    Runs `ir-ctl -r` in the background and keeps a rolling buffer of raw lines.
-    Works great for IR "Live Monitor" and replay workflows.
+    Runs `ir-ctl -r` In The Background And Keeps A Rolling Buffer Of Raw Lines.
+    Works Great For IR "Live Monitor" And Replay Workflows.
     """
 
     def __init__(self, rxDev=None, txDev=None, maxLines=200):
-        # Allow environment overrides so you don't hardcode device nodes
+        # Allow Environment Overrides So You Don't Hardcode Device Nodes
         self.rxDev = rxDev or os.environ.get("IR_RX_DEV", "/dev/lirc0")
         self.txDev = txDev or os.environ.get("IR_TX_DEV", "/dev/lirc1")
 
@@ -182,7 +182,7 @@ class IRCaptureManager:
 
         self._stopEvent.set()
 
-        # Try to stop subprocess cleanly
+        # Try To Stop Subprocess Cleanly
         try:
             if self._proc and self._proc.poll() is None:
                 self._proc.terminate()
@@ -198,30 +198,30 @@ class IRCaptureManager:
 
     def sendRawText(self, rawText):
         """
-        Accepts text in ir-ctl raw format, e.g.
+        Accepts Text In ir-ctl Raw Format, e.g.
           pulse 9000
           space 4500
           pulse 560
           space 560
           ...
-        Writes to a temp file, then sends with ir-ctl.
+        Writes To A Temp File, Then Sends With ir-ctl.
         """
         rawText = (rawText or "").strip()
         if not rawText:
-            return {"ok": False, "error": "No RAW text provided."}
+            return {"ok": False, "error": "No RAW Text Provided."}
 
-        # Must contain pulse/space or +/-
+        # Must Contain pulse/space Or +/-
         hasWords = ("pulse" in rawText) or ("space" in rawText) or ("+" in rawText and "-" in rawText)
         if not hasWords:
-            return {"ok": False, "error": "RAW text doesn't look like ir-ctl format."}
+            return {"ok": False, "error": "RAW Text Doesn't Look Like ir-ctl Format."}
 
         try:
             with tempfile.NamedTemporaryFile(mode="w", delete=False, prefix="ir_", suffix=".ir") as f:
                 f.write(rawText)
                 tmpPath = f.name
 
-            # Send using ir-ctl
-            # Note: `-s <file>` sends a raw file
+            # Send Using ir-ctl
+            # Note: `-s <file>` Sends A Raw File
             cmd = ["ir-ctl", "-d", self.txDev, "-s", tmpPath]
             out = subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT)
 
@@ -239,26 +239,26 @@ class IRCaptureManager:
 
     def sendScancode(self, protocol, scancode):
         """
-        Sends a decoded scancode using ir-ctl, e.g.:
+        Sends A Decoded Scancode Using ir-ctl, e.g.:
           ir-ctl -d /dev/lirc1 -S nec:0x45
         """
         protocol = (protocol or "").strip().lower()
         scancode = (scancode or "").strip().lower()
 
         if not protocol or not scancode:
-            return {"ok": False, "error": "Protocol and scancode are required."}
+            return {"ok": False, "error": "Protocol And Scancode Are Required."}
 
-        # Basic safety validation (avoid shell injection / weird stuff)
-        # protocol should be like: nec, rc5, rc6, sony, panasonic, etc.
+        # Basic Safety Validation (Avoid Shell Injection / Weird Stuff)
+        # protocol Should Be Like: nec, rc5, rc6, sony, panasonic, etc.
         for ch in protocol:
             if not (ch.isalnum() or ch in ("_", "-", ".")):
-                return {"ok": False, "error": "Protocol contains invalid characters."}
+                return {"ok": False, "error": "Protocol Contains Invalid Characters."}
 
-        # scancode can be hex like 0x45 or decimal like 69
+        # scancode Can Be Hex Like 0x45 Or Decimal Like 69
         isHex = scancode.startswith("0x") and all(c in "0123456789abcdef" for c in scancode[2:])
         isDec = scancode.isdigit()
         if not (isHex or isDec):
-            return {"ok": False, "error": "Scancode must be hex (0x..) or decimal digits."}
+            return {"ok": False, "error": "Scancode Must Be Hex (0x..) Or Decimal Digits."}
 
         try:
             cmd = ["ir-ctl", "-d", self.txDev, "-S", f"{protocol}:{scancode}"]
@@ -271,11 +271,11 @@ class IRCaptureManager:
 
     def _captureLoop(self):
         """
-        Capture with:
+        Capture With:
           sudo ir-ctl -d /dev/lirc0 -r
-        This prints raw timings as a stream like:
+        This Prints Raw Timings As A Stream Like:
           +171 -275 +160 -298 ...
-        We store lines into a rolling deque.
+        We Store Lines Into A Rolling Deque.
         """
         try:
             cmd = ["ir-ctl", "-d", self.rxDev, "-r"]
@@ -294,7 +294,7 @@ class IRCaptureManager:
 
                 line = self._proc.stdout.readline()
                 if not line:
-                    # process ended
+                    # Process Ended
                     break
 
                 line = line.strip()
