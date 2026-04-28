@@ -6,7 +6,7 @@ A modular Raspberry Pi-based wireless experimentation platform featuring:
 - IR capture and transmission
 - NFC (PN532) interaction
 - System and network monitoring
-- WiFi managment and fallback AP service
+- WiFi management and fallback AP service
 - Optional hardware-based panic button service
 
 ---
@@ -40,11 +40,24 @@ The system is built to be:
 - Read NFC tags
 - Inspect tag data
 - I2C-based communication
+- NDEF read (Type 2 first, MIFARE Classic best-effort fallback)
+- NDEF write (text record and URL/URI record)
+- MIFARE Classic Tools (best-effort, common-keys only)
+  - Dump readable sectors (skips trailers by default)
+  - Wipe to factory state (only sectors that authenticate)
+- Type 2 Tag Tools (NTAG213, NTAG215, NTAG216, and other NFC Forum Type 2 tags)
+  - Detect Type 2 tag (parses Capability Container, identifies NTAG variant from CC)
+  - Dump tag (page-numbered rows, region-annotated: manufacturer / lock / CC / user / config)
+  - Read NDEF (TLV walk from page 4)
+  - Wipe user memory (empty NDEF TLV at page 4, or zero all user pages)
+  - Format empty NDEF (writes valid CC if missing, then empty NDEF TLV)
+  - Export dump (copy to clipboard, download as JSON or TXT)
 
 ### System Monitoring
 - CPU / memory stats
 - Network information
 - Interface status
+- Restart and Shutdown buttons (graceful reboot/poweroff from Stats page)
 
 ### WiFi Management
 - Scan nearby WiFi networks (via NetworkManager)
@@ -52,6 +65,7 @@ The system is built to be:
 - Connect to networks on demand (with optional autoconnect + priority)
 - Manage saved profiles (list, delete)
 - Configure autoconnect behavior and connection priority
+- Show/hide toggle on password fields
 
 ### Fallback Access Point
 - Automatically start AP when no WiFi connection is available
@@ -63,23 +77,28 @@ The system is built to be:
 - GPIO-based hardware trigger
 - OLED status display
 - Runs as independent systemd service for reliability
+- OLED clears cleanly on graceful shutdown (SIGTERM handler)
 
 ---
 
 ## Project Structure (basic)
 
 ```
-webUI/
+wireless-lab/
 ├── app.py
 ├── config/
 ├── modules/
+├── templates/
 ├── static/
 ├── services/
-│   ├── webUI.service
+│   ├── wireless-lab.service
+│   ├── wifiFallback.service
+│   ├── wifiFallback.py
 │   ├── panicButton.service
 │   └── panicButton/
 │       ├── panicButton.py
 │       ├── requirements.txt
+│       ├── font1.ttf
 │       └── venv/
 ├── requirements.txt
 ├── system-deps.txt
@@ -102,7 +121,7 @@ xargs -a system-deps.txt sudo apt install -y
 ### 2. Set Up Web UI
 
 ```
-cd webUI
+cd wireless-lab
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
