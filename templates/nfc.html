@@ -92,6 +92,47 @@
   <div class="small muted" id="classicStatus" style="margin-top:10px;">-</div>
 </div>
 
+<div class="card">
+  <div class="row">
+    <div class="label">Type 2 Tag Tools</div>
+    <div class="value">
+      <button class="pill" onclick="type2Detect()">Detect Type 2 Tag</button>
+      <button class="pill" onclick="type2Dump()">Dump Type 2 Tag</button>
+      <button class="pill" onclick="type2ReadNdef()">Read NDEF</button>
+      <button class="pill" onclick="type2WipeUser()">Wipe User Memory</button>
+      <button class="pill" onclick="type2FormatEmpty()">Format Empty NDEF</button>
+    </div>
+  </div>
+
+  <div class="small muted">
+    For NTAG213, NTAG215, NTAG216, and other NFC Forum Type 2 tags. These tags use pages, not MIFARE Classic sectors/keys.
+  </div>
+
+  <div class="row" style="margin-top:10px;">
+    <div class="label">Wipe Mode</div>
+    <div class="value" style="font-weight:400;">
+      <label style="margin-right:10px;">
+        <input type="radio" name="type2WipeMode" value="ndef" checked /> Empty NDEF (page 4 only)
+      </label>
+      <label>
+        <input type="radio" name="type2WipeMode" value="user" /> Zero all user pages
+      </label>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label">Export Dump</div>
+    <div class="value">
+      <button class="pill" onclick="type2CopyDump()">Copy</button>
+      <button class="pill" onclick="type2DownloadDump('json')">Download JSON</button>
+      <button class="pill" onclick="type2DownloadDump('txt')">Download TXT</button>
+    </div>
+  </div>
+
+  <div class="small muted" id="type2Status" style="margin-top:10px;">-</div>
+  <pre class="mono" id="type2Out" style="white-space:pre-wrap; margin-top:10px;">-</pre>
+</div>
+
 <script>
   async function apiGet(url) {
     const res = await fetch(url, { cache: 'no-store' });
@@ -178,6 +219,187 @@
     const r = await apiPost('/api/nfc/wipeClassic', { resetKeys: resetKeys, wipeData: wipeData });
     if (st) st.textContent = r.ok ? (r.found ? 'Wipe OK' : 'No Tag') : ('Error: ' + (r.error || 'Unknown'));
     showJson('scanOut', r);
+  }
+
+  // ---------- Type 2 / NTAG Handlers ----------
+  let lastType2Dump = null;
+
+  function setType2Status(msg) {
+    const st = document.getElementById('type2Status');
+    if (st) st.textContent = msg;
+  }
+
+  function showType2(obj) {
+    const el = document.getElementById('type2Out');
+    if (el) el.textContent = JSON.stringify(obj, null, 2);
+  }
+
+  function formatDumpAsText(dump) {
+    if (!dump || !dump.pages) return '';
+    const lines = [];
+    lines.push('# Type 2 Tag Dump');
+    if (dump.product) lines.push('# Product: ' + dump.product);
+    if (dump.uidHex) lines.push('# UID: ' + dump.uidHex);
+    if (dump.cc && dump.cc.dataBytes != null) lines.push('# Data Bytes: ' + dump.cc.dataBytes);
+    lines.push('# Pages: ' + dump.pageCount);
+    lines.push('');
+    for (const p of dump.pages) {
+      const pageStr = String(p.page).padStart(3, '0');
+      const hexPairs = (p.hex || '').match(/.{1,2}/g) || [];
+      const region = p.region ? '  [' + p.region + ']' : '';
+      lines.push('Page ' + pageStr + ': ' + hexPairs.join(' ') + region);
+    }
+    return lines.join('\n');
+  }
+
+  async function type2Detect() {
+    setType2Status('Detecting...');
+    const r = await apiPost('/api/nfc/type2/detect', {});
+    if (!r.ok) {
+      setType2Status('Error: ' + (r.error || 'Unknown'));
+    } else if (!r.found) {
+      setType2Status('No tag in field');
+    } else if (r.isType2Ndef) {
+      setType2Status('Type 2 detected' + (r.product ? ' — ' + r.product : ''));
+    } else {
+      setType2Status('Tag found but not Type 2 NDEF');
+    }
+    showType2(r);
+  }
+
+  async function type2Dump() {
+    setType2Status('Dumping...');
+    const r = await apiPost('/api/nfc/type2/dump', {});
+    if (!r.ok) {
+      setType2Status('Error: ' + (r.error || 'Unknown'));
+      lastType2Dump = null;
+      showType2(r);
+      return;
+    }
+    if (!r.found) {
+      setType2Status('No tag in field');
+      lastType2Dump = null;
+      showType2(r);
+      return;
+    }
+    lastType2Dump = r;
+    setType2Status('Dump OK — ' + r.pageCount + ' pages' + (r.product ? ' (' + r.product + ')' : ''));
+    const el = document.getElementById('type2Out');
+    if (el) el.textContent = formatDumpAsText(r);
+  }
+
+  async function type2ReadNdef() {
+    setType2Status('Reading NDEF...');
+    const r = await apiPost('/api/nfc/type2/readNdef', {});
+    if (!r.ok) {
+      setType2Status('Error: ' + (r.error || 'Unknown'));
+    } else if (!r.found) {
+      setType2Status('No tag in field');
+    } else {
+      setType2Status(r.hasNdef ? 'NDEF found' : 'No NDEF');
+    }
+    showType2(r);
+  }
+
+  async function type2WipeUser() {
+    const mode = (document.querySelector('input[name="type2WipeMode"]:checked') || {}).value || 'ndef';
+    const prompt = mode === 'user'
+      ? 'Zero ALL user pages on this Type 2 tag? Existing user data will be lost.'
+      : 'Clear NDEF (write empty TLV at page 4)? Existing NDEF will be lost.';
+    if (!confirm(prompt)) return;
+    setType2Status('Wiping (' + mode + ')...');
+    const r = await apiPost('/api/nfc/type2/wipeUser', { mode: mode });
+    if (!r.ok) {
+      setType2Status('Error: ' + (r.error || 'Unknown'));
+    } else if (!r.found) {
+      setType2Status('No tag in field');
+    } else {
+      setType2Status('Wipe OK — ' + (r.pagesWritten ? r.pagesWritten.length : 0) + ' page(s)');
+    }
+    showType2(r);
+  }
+
+  async function type2FormatEmpty() {
+    if (!confirm('Format this tag with valid CC and an empty NDEF TLV?')) return;
+    setType2Status('Formatting...');
+    const r = await apiPost('/api/nfc/type2/formatEmpty', {});
+    if (!r.ok) {
+      setType2Status('Error: ' + (r.error || 'Unknown'));
+    } else if (!r.found) {
+      setType2Status('No tag in field');
+    } else {
+      setType2Status('Format OK' + (r.ccWritten ? ' (CC written)' : ''));
+    }
+    showType2(r);
+  }
+
+  async function type2CopyDump() {
+    if (!lastType2Dump) {
+      setType2Status('Run "Dump Type 2 Tag" first');
+      return;
+    }
+    const text = formatDumpAsText(lastType2Dump);
+
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        setType2Status('Dump copied to clipboard');
+        return;
+      } catch (e) {
+        // Fall Through To Legacy Path
+      }
+    }
+
+    // Legacy Fallback: Hidden Textarea + execCommand. Required Over Plain HTTP
+    // Where navigator.clipboard Is Not Exposed By The Browser.
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (ok) {
+        setType2Status('Dump copied to clipboard');
+      } else {
+        setType2Status('Copy failed (browser blocked it). Use Download TXT instead.');
+      }
+    } catch (e) {
+      setType2Status('Copy failed: ' + e + '. Use Download TXT instead.');
+    }
+  }
+
+  function type2DownloadDump(kind) {
+    if (!lastType2Dump) {
+      setType2Status('Run "Dump Type 2 Tag" first');
+      return;
+    }
+    const uid = lastType2Dump.uidHex || 'unknown';
+    let body, mime, name;
+    if (kind === 'json') {
+      body = JSON.stringify(lastType2Dump, null, 2);
+      mime = 'application/json';
+      name = 'type2-dump-' + uid + '.json';
+    } else {
+      body = formatDumpAsText(lastType2Dump);
+      mime = 'text/plain';
+      name = 'type2-dump-' + uid + '.txt';
+    }
+    const blob = new Blob([body], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setType2Status('Downloaded ' + name);
   }
 
   refreshStatus();

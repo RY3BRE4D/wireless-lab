@@ -18,6 +18,7 @@ from modules.irModule import IRCaptureManager, IRDecodeManager
 from modules.featureConfig import loadFeatures, saveFeatures, setFeatureEnabled, isEnabled
 from modules.irInit import enableIrProtocols
 from modules.pn532Module import PN532Module
+from modules.type2TagTools import Type2TagTools
 
 app = Flask(__name__)
 
@@ -38,6 +39,7 @@ if isEnabled(features, "ir"):
 
 # ---- NFC (PN532) Manager ----
 pn532 = None
+type2Tools = None
 
 if isEnabled(features, "nfc_pn532"):
     cfg = features.get("nfc_pn532", {}) or {}
@@ -51,6 +53,7 @@ if isEnabled(features, "nfc_pn532"):
 
     pn532 = PN532Module(i2cAddress=int(addr), debug=bool(cfg.get("debug", False)))
     pn532.init()
+    type2Tools = Type2TagTools(pn532)
 
 # ---------- Routes ----------
 
@@ -248,6 +251,40 @@ if isEnabled(features, "nfc_pn532"):
         resetKeys = bool(data.get("resetKeys", True))
         wipeData = bool(data.get("wipeData", True))
         return jsonify(pn532.wipeMifareClassicToFactory(resetKeys=resetKeys, wipeData=wipeData))
+
+    # ---- Type 2 / NTAG Tools (NTAG213/NTAG215/NTAG216 And Compatible) ----
+
+    @app.post("/api/nfc/type2/detect")
+    def apiNfcType2Detect():
+        if not type2Tools:
+            return jsonify({"ok": False, "error": "PN532 Disabled"})
+        return jsonify(type2Tools.detectType2Tag())
+
+    @app.post("/api/nfc/type2/dump")
+    def apiNfcType2Dump():
+        if not type2Tools:
+            return jsonify({"ok": False, "error": "PN532 Disabled"})
+        return jsonify(type2Tools.dumpType2Tag())
+
+    @app.post("/api/nfc/type2/readNdef")
+    def apiNfcType2ReadNdef():
+        if not type2Tools:
+            return jsonify({"ok": False, "error": "PN532 Disabled"})
+        return jsonify(type2Tools.readType2Ndef())
+
+    @app.post("/api/nfc/type2/wipeUser")
+    def apiNfcType2WipeUser():
+        if not type2Tools:
+            return jsonify({"ok": False, "error": "PN532 Disabled"})
+        data = request.get_json(force=True) or {}
+        mode = (data.get("mode") or "ndef").strip().lower()
+        return jsonify(type2Tools.wipeType2UserMemory(mode=mode))
+
+    @app.post("/api/nfc/type2/formatEmpty")
+    def apiNfcType2FormatEmpty():
+        if not type2Tools:
+            return jsonify({"ok": False, "error": "PN532 Disabled"})
+        return jsonify(type2Tools.formatEmptyType2Ndef())
 
 # ---------- Network Routes ----------
 
