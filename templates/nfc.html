@@ -33,26 +33,218 @@
 
 <div class="card">
   <div class="row">
-    <div class="label">Write NDEF Text</div>
+    <div class="label">NFC URI / Task Writer</div>
     <div class="value">
-      <button class="pill" onclick="writeText()">Write</button>
+      <button class="pill" onclick="writeTask()">Write</button>
     </div>
   </div>
-  <div class="small muted">Writes A Simple NDEF Text Record To A Writable Type 2 Tag. (Classic Fallback Uses Common Keys)</div>
-  <input id="ndefText" style="width:100%; margin-top:10px;" placeholder="Hello From Pi Zero" />
-  <div class="small muted" id="writeStatus" style="margin-top:10px;">-</div>
-</div>
+  <div class="small muted">
+    Pick a task, fill in the natural fields, and the correct NDEF payload is built for you.
+    The existing NDEF URI / Text writers are reused under the hood.
+  </div>
 
-<div class="card">
-  <div class="row">
-    <div class="label">Write NDEF URL (Open URL)</div>
-    <div class="value">
-      <button class="pill" onclick="writeUrl()">Write</button>
+  <div class="row" style="margin-top:10px;">
+    <div class="label">Task Type</div>
+    <div class="value" style="font-weight:400;">
+      <select id="taskType" onchange="onTaskTypeChange()">
+        <option value="web">Web / HTTP</option>
+        <option value="tel">Phone Call / Dialer</option>
+        <option value="sms">SMS</option>
+        <option value="mailto">Email</option>
+        <option value="maps">Maps / Location</option>
+        <option value="wifi">WiFi Config</option>
+        <option value="vcard">Contact / vCard Link</option>
+        <option value="calendar">Calendar Event Link</option>
+        <option value="deeplink">App Launch / Deep Link</option>
+        <option value="navigation">Navigation (Android-only)</option>
+        <option value="payment">Payment Link</option>
+        <option value="text">Plain Text</option>
+        <option value="custom">Custom URI / Advanced</option>
+      </select>
     </div>
   </div>
-  <div class="small muted">Writes A Single NDEF URI Record (No NFC Tools / NFC Tasks AAR Breadcrumbs).</div>
-  <input id="ndefUrl" style="width:100%; margin-top:10px;" placeholder="http://wireless-lab.local/" />
-  <div class="small muted" id="writeUrlStatus" style="margin-top:10px;">-</div>
+
+  <!-- Web / HTTP -->
+  <div class="taskFields" data-task="web">
+    <input class="taskInput" data-field="url" style="width:100%; margin-top:10px;" placeholder="example.com or https://example.com" oninput="updatePreview()" />
+    <div class="small muted" style="margin-top:6px;">If you omit the scheme, https:// is added. http:// is preserved if you type it.</div>
+    <div class="small muted">Compatibility: Android yes &bull; iPhone yes</div>
+  </div>
+
+  <!-- Tel -->
+  <div class="taskFields" data-task="tel" style="display:none;">
+    <input class="taskInput" data-field="number" style="width:100%; margin-top:10px;" placeholder="313-555-1234 or +13135551234" oninput="updatePreview()" />
+    <div class="small muted" style="margin-top:6px;">Opens the dialer; will not auto-call. Spaces, dashes, and parentheses are stripped.</div>
+    <div class="small muted">Compatibility: Android yes &bull; iPhone yes</div>
+  </div>
+
+  <!-- SMS -->
+  <div class="taskFields" data-task="sms" style="display:none;">
+    <input class="taskInput" data-field="number" style="width:100%; margin-top:10px;" placeholder="Phone number (e.g. 3135551234)" oninput="updatePreview()" />
+    <input class="taskInput" data-field="message" style="width:100%; margin-top:8px;" placeholder="Message body (optional)" oninput="updatePreview()" />
+    <div class="small muted" style="margin-top:6px;">Compatibility: Android yes &bull; iPhone yes</div>
+  </div>
+
+  <!-- Mailto -->
+  <div class="taskFields" data-task="mailto" style="display:none;">
+    <input class="taskInput" data-field="email" style="width:100%; margin-top:10px;" placeholder="test@example.com" oninput="updatePreview()" />
+    <input class="taskInput" data-field="subject" style="width:100%; margin-top:8px;" placeholder="Subject (optional)" oninput="updatePreview()" />
+    <textarea class="taskInput" data-field="body" rows="3" style="width:100%; margin-top:8px;" placeholder="Body (optional)" oninput="updatePreview()"></textarea>
+    <div class="small muted" style="margin-top:6px;">Compatibility: Android yes &bull; iPhone yes</div>
+  </div>
+
+  <!-- Maps -->
+  <div class="taskFields" data-task="maps" style="display:none;">
+    <input class="taskInput" data-field="place" style="width:100%; margin-top:10px;" placeholder="Place name (optional)" oninput="updatePreview()" />
+    <input class="taskInput" data-field="street" style="width:100%; margin-top:8px;" placeholder="Street address" oninput="updatePreview()" />
+    <input class="taskInput" data-field="city" style="width:100%; margin-top:8px;" placeholder="City" oninput="updatePreview()" />
+    <input class="taskInput" data-field="state" style="width:100%; margin-top:8px;" placeholder="State / Region" oninput="updatePreview()" />
+    <input class="taskInput" data-field="zip" style="width:100%; margin-top:8px;" placeholder="ZIP / Postal" oninput="updatePreview()" />
+    <div class="small muted" style="margin-top:6px;">Builds a Google Maps URL for cross-platform reliability (geo: avoided due to iPhone support).</div>
+    <div class="small muted">Compatibility: Android yes &bull; iPhone yes</div>
+  </div>
+
+  <!-- WiFi -->
+  <div class="taskFields" data-task="wifi" style="display:none;">
+    <input class="taskInput" data-field="ssid" style="width:100%; margin-top:10px;" placeholder="SSID" oninput="updatePreview()" />
+    <input class="taskInput" data-field="password" style="width:100%; margin-top:8px;" placeholder="Password (leave empty for Open)" oninput="updatePreview()" />
+    <div class="row" style="margin-top:8px;">
+      <div class="label">Auth</div>
+      <div class="value" style="font-weight:400;">
+        <select class="taskInput" data-field="auth" onchange="updatePreview()">
+          <option value="WPA">WPA / WPA2</option>
+          <option value="WEP">WEP</option>
+          <option value="nopass">Open</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="label">Hidden Network</div>
+      <div class="value" style="font-weight:400;">
+        <input type="checkbox" class="taskInput" data-field="hidden" onchange="updatePreview()" />
+      </div>
+    </div>
+    <div class="small muted" style="margin-top:6px;">Written as NDEF Text in the WiFi-QR compatibility format. Not a true URI.</div>
+    <div class="small muted">Compatibility: Android limited/varies &bull; iPhone generally no for this format</div>
+  </div>
+
+  <!-- vCard Link -->
+  <div class="taskFields" data-task="vcard" style="display:none;">
+    <input class="taskInput" data-field="url" style="width:100%; margin-top:10px;" placeholder="https://example.com/contact.vcf" oninput="updatePreview()" />
+    <div class="small muted" style="margin-top:6px;">Writes a link to a hosted .vcf file. Embedded vCard NDEF can come later.</div>
+    <div class="small muted">Compatibility: Android yes &bull; iPhone yes</div>
+  </div>
+
+  <!-- Calendar -->
+  <div class="taskFields" data-task="calendar" style="display:none;">
+    <input class="taskInput" data-field="title" style="width:100%; margin-top:10px;" placeholder="Event title" oninput="updatePreview()" />
+
+    <div class="row" style="margin-top:8px;">
+      <div class="label">All-Day Event</div>
+      <div class="value" style="font-weight:400;">
+        <input type="checkbox" class="taskInput" data-field="allDay" id="calAllDay" onchange="onCalendarAllDayChange()" />
+      </div>
+    </div>
+
+    <div class="row" id="calStartDateRow">
+      <div class="label">Start Date</div>
+      <div class="value" style="font-weight:400;">
+        <input type="date" class="taskInput" data-field="startDate" oninput="onCalendarStartChange()" />
+      </div>
+    </div>
+
+    <div class="row" id="calStartTimeRow">
+      <div class="label">Start Time</div>
+      <div class="value" style="font-weight:400;">
+        <input type="time" class="taskInput" data-field="startTime" oninput="onCalendarStartChange()" />
+      </div>
+    </div>
+
+    <div class="row" id="calEndDateRow">
+      <div class="label">End Date</div>
+      <div class="value" style="font-weight:400;">
+        <input type="date" class="taskInput" data-field="endDate" oninput="onCalendarEndChange()" />
+      </div>
+    </div>
+
+    <div class="row" id="calEndTimeRow">
+      <div class="label">End Time</div>
+      <div class="value" style="font-weight:400;">
+        <input type="time" class="taskInput" data-field="endTime" oninput="onCalendarEndChange()" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="label">Timezone</div>
+      <div class="value" style="font-weight:400;">
+        <input type="text" class="taskInput" data-field="tz" placeholder="America/Detroit" oninput="updatePreview()" style="min-width:14em;" />
+      </div>
+    </div>
+
+    <input class="taskInput" data-field="location" style="width:100%; margin-top:8px;" placeholder="Location (optional)" oninput="updatePreview()" />
+    <textarea class="taskInput" data-field="details" rows="2" style="width:100%; margin-top:8px;" placeholder="Details / description (optional)" oninput="updatePreview()"></textarea>
+
+    <div class="small muted" style="margin-top:10px;">Event Preview:</div>
+    <pre class="mono" id="calendarPreview" style="white-space:pre-wrap; word-break:break-word; padding:8px; border:1px solid #888; border-radius:6px; margin-top:6px; min-height:1.4em;">-</pre>
+
+    <details style="margin-top:8px;">
+      <summary class="small muted" style="cursor:pointer;">Advanced (machine format / final URL)</summary>
+      <pre class="mono" id="calendarAdvanced" style="white-space:pre-wrap; word-break:break-all; padding:8px; border:1px dashed #888; border-radius:6px; margin-top:6px; min-height:1.4em;">-</pre>
+    </details>
+
+    <div class="small muted" style="margin-top:6px;">Opens a Google Calendar template &mdash; user confirms before any event is created.</div>
+    <div class="small muted">Compatibility: Android yes &bull; iPhone yes</div>
+  </div>
+
+  <!-- Deep Link -->
+  <div class="taskFields" data-task="deeplink" style="display:none;">
+    <input class="taskInput" data-field="uri" style="width:100%; margin-top:10px;" placeholder="youtube://watch?v=abc123" oninput="updatePreview()" />
+    <div class="small muted" style="margin-top:6px;">Preserved verbatim. Resolution depends on installed apps and OS rules.</div>
+    <div class="small muted">Compatibility: Android usually &bull; iPhone varies / stricter</div>
+  </div>
+
+  <!-- Navigation -->
+  <div class="taskFields" data-task="navigation" style="display:none;">
+    <input class="taskInput" data-field="destination" style="width:100%; margin-top:10px;" placeholder="Detroit" oninput="updatePreview()" />
+    <div class="small muted" style="margin-top:6px;"><strong>Android-only.</strong> iPhone does not support this format &mdash; use Maps / Location for cross-platform.</div>
+    <div class="small muted">Compatibility: Android yes &bull; iPhone no</div>
+  </div>
+
+  <!-- Payment -->
+  <div class="taskFields" data-task="payment" style="display:none;">
+    <input class="taskInput" data-field="url" style="width:100%; margin-top:10px;" placeholder="https://cash.app/$username" oninput="updatePreview()" />
+    <div class="small muted" style="margin-top:6px;">Compatibility: Android yes &bull; iPhone yes</div>
+  </div>
+
+  <!-- Plain Text -->
+  <div class="taskFields" data-task="text" style="display:none;">
+    <textarea class="taskInput" data-field="text" rows="3" style="width:100%; margin-top:10px;" placeholder="Free text" oninput="updatePreview()"></textarea>
+    <div class="small muted" style="margin-top:6px;">Written as NDEF Text. iPhone may not auto-open anything for plain text.</div>
+    <div class="small muted">Compatibility: Android yes &bull; iPhone yes (no auto-action)</div>
+  </div>
+
+  <!-- Custom URI -->
+  <div class="taskFields" data-task="custom" style="display:none;">
+    <input class="taskInput" data-field="payload" style="width:100%; margin-top:10px;" placeholder="tel:3135551234 or smsto:3135551234:Hello" oninput="updatePreview()" />
+    <div class="row" style="margin-top:8px;">
+      <div class="label">Write Mode</div>
+      <div class="value" style="font-weight:400;">
+        <select class="taskInput" data-field="mode" onchange="updatePreview()">
+          <option value="uri">NDEF URI</option>
+          <option value="text">NDEF Text</option>
+        </select>
+      </div>
+    </div>
+    <div class="small muted" style="margin-top:6px;">Whitespace-trimmed only. No other normalization.</div>
+  </div>
+
+  <div class="row" style="margin-top:14px;">
+    <div class="label">Payload Type</div>
+    <div class="value mono" id="taskLabel" style="font-weight:400;">NDEF URI</div>
+  </div>
+  <div class="small muted">Live Preview:</div>
+  <pre class="mono" id="taskPreview" style="white-space:pre-wrap; word-break:break-all; padding:8px; border:1px solid #888; border-radius:6px; margin-top:6px; min-height:1.4em;">-</pre>
+  <div class="small muted" id="taskStatus" style="margin-top:10px;">-</div>
 </div>
 
 <div class="card">
@@ -184,21 +376,546 @@
     showJson('scanOut', r);
   }
 
-  async function writeText() {
-    document.getElementById('writeStatus').textContent = 'Writing...';
-    const text = document.getElementById('ndefText').value || '';
-    const r = await apiPost('/api/nfc/writeNdefText', { text: text, language: 'en' });
-    document.getElementById('writeStatus').textContent =
-      r.ok ? ('OK' + (r.tagFamily ? (' (' + r.tagFamily + ')') : '')) : ('Error: ' + (r.error || 'Unknown'));
-    showJson('scanOut', r);
+  // ---------- NFC URI / Task Writer ----------
+
+  function onTaskTypeChange() {
+    const sel = document.getElementById('taskType');
+    const value = sel ? sel.value : 'web';
+    const groups = document.querySelectorAll('.taskFields');
+    groups.forEach(g => {
+      g.style.display = (g.getAttribute('data-task') === value) ? '' : 'none';
+    });
+    if (value === 'calendar') applyCalendarDefaultsOnce();
+    updatePreview();
   }
 
-  async function writeUrl() {
-    document.getElementById('writeUrlStatus').textContent = 'Writing...';
-    const url = document.getElementById('ndefUrl').value || '';
-    const r = await apiPost('/api/nfc/writeNdefUrl', { url: url });
-    document.getElementById('writeUrlStatus').textContent =
-      r.ok ? ('OK' + (r.tagFamily ? (' (' + r.tagFamily + ')') : '')) : ('Error: ' + (r.error || 'Unknown'));
+  function getActiveFields() {
+    const sel = document.getElementById('taskType');
+    const value = sel ? sel.value : 'web';
+    const group = document.querySelector('.taskFields[data-task="' + value + '"]');
+    const fields = {};
+    if (!group) return { taskType: value, fields: fields };
+    group.querySelectorAll('.taskInput').forEach(el => {
+      const name = el.getAttribute('data-field');
+      if (!name) return;
+      if (el.type === 'checkbox') {
+        fields[name] = !!el.checked;
+      } else {
+        fields[name] = el.value || '';
+      }
+    });
+    if (value === 'calendar') {
+      // Convert The Friendly Date/Time/Timezone Inputs Into The Machine
+      // start/end Strings That The Server-Side buildCalendarUri Expects
+      // (YYYYMMDDTHHMMSSZ For Timed Events, YYYYMMDD For All-Day).
+      const v = validateCalendarEventForm(fields);
+      if (v.ok) {
+        fields.start = v.startMachine;
+        fields.end = v.endMachine;
+      }
+    }
+    return { taskType: value, fields: fields };
+  }
+
+  // ---------- Calendar Event Helpers ----------
+
+  const CAL_MONTH_NAMES = [
+    'January','February','March','April','May','June',
+    'July','August','September','October','November','December'
+  ];
+
+  let calEndManuallyEdited = false;
+  let calendarDefaultsApplied = false;
+
+  function getBrowserTimezone() {
+    // Best-Effort Browser Timezone Detection. Falls Back To "UTC" When
+    // Intl Is Unavailable Or Returns A Non-String (Very Old Browsers Only).
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz && typeof tz === 'string') return tz;
+    } catch (e) { /* Fall Through To Default. */ }
+    return 'UTC';
+  }
+
+  function parseFriendlyDateTime(dateStr, timeStr) {
+    // dateStr Is The Value From <input type="date"> (YYYY-MM-DD).
+    // timeStr Is The Value From <input type="time"> (HH:MM In 24-Hour Form).
+    // Returns {year, month, day, hour, minute} Or null On Invalid/Missing Date.
+    if (!dateStr) return null;
+    const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+    if (!dm) return null;
+    let hour = 0, minute = 0;
+    if (timeStr) {
+      const tm = /^(\d{2}):(\d{2})/.exec(timeStr);
+      if (!tm) return null;
+      hour = parseInt(tm[1], 10);
+      minute = parseInt(tm[2], 10);
+    }
+    return {
+      year: parseInt(dm[1], 10),
+      month: parseInt(dm[2], 10),
+      day: parseInt(dm[3], 10),
+      hour: hour,
+      minute: minute
+    };
+  }
+
+  function zonedWallTimeToUtc(parts, tz) {
+    // Convert Wall-Clock Components In Timezone tz To A UTC Date Object.
+    // Strategy: Treat The Wall-Clock As If It Were UTC, Then Use Intl
+    // Formatting In tz To Discover The Offset For That Specific Moment.
+    // Doing It Per-Moment Handles DST Transitions Correctly (e.g. Detroit
+    // Is UTC-5 In Winter And UTC-4 In Summer).
+    const utcGuessMs = Date.UTC(
+      parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, 0
+    );
+    let dtf;
+    try {
+      dtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false
+      });
+    } catch (e) {
+      // Invalid Timezone — Fall Back To Treating Wall-Clock As UTC.
+      return new Date(utcGuessMs);
+    }
+    const formatted = dtf.formatToParts(new Date(utcGuessMs));
+    const grab = type => {
+      const part = formatted.find(p => p.type === type);
+      return part ? part.value : '0';
+    };
+    let h = parseInt(grab('hour'), 10);
+    if (h === 24) h = 0; // Some Browsers Render Midnight As "24" Instead Of "00".
+    const asUtcMs = Date.UTC(
+      parseInt(grab('year'), 10),
+      parseInt(grab('month'), 10) - 1,
+      parseInt(grab('day'), 10),
+      h,
+      parseInt(grab('minute'), 10),
+      parseInt(grab('second'), 10)
+    );
+    const offset = asUtcMs - utcGuessMs;
+    return new Date(utcGuessMs - offset);
+  }
+
+  function formatCalendarUtc(date) {
+    // Format A Date Object As Google Calendar's Basic UTC: YYYYMMDDTHHMMSSZ.
+    const pad2 = n => String(n).padStart(2, '0');
+    return (
+      date.getUTCFullYear() +
+      pad2(date.getUTCMonth() + 1) +
+      pad2(date.getUTCDate()) +
+      'T' +
+      pad2(date.getUTCHours()) +
+      pad2(date.getUTCMinutes()) +
+      pad2(date.getUTCSeconds()) +
+      'Z'
+    );
+  }
+
+  function formatCalendarDate(parts) {
+    // Format Date-Only Components As YYYYMMDD (Used For All-Day Events).
+    const pad2 = n => String(n).padStart(2, '0');
+    return parts.year + pad2(parts.month) + pad2(parts.day);
+  }
+
+  function addOneDay(parts) {
+    // Add One Calendar Day To Date-Only Parts. Used For All-Day End-Exclusive
+    // Conversion: Google Calendar's "dates=YYYYMMDD/YYYYMMDD" Treats The End
+    // Date As Exclusive, So A Single-Day Event "May 1" Becomes 20260501/20260502.
+    const d = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + 1));
+    return {
+      year: d.getUTCFullYear(),
+      month: d.getUTCMonth() + 1,
+      day: d.getUTCDate()
+    };
+  }
+
+  function friendlyDateString(parts) {
+    return CAL_MONTH_NAMES[parts.month - 1] + ' ' + parts.day + ', ' + parts.year;
+  }
+
+  function friendlyDateTimeString(parts) {
+    // Render In 12-Hour AM/PM Format For The Human-Readable Preview.
+    let h = parts.hour;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    if (h === 0) h = 12;
+    else if (h > 12) h -= 12;
+    const mm = String(parts.minute).padStart(2, '0');
+    return friendlyDateString(parts) + ', ' + h + ':' + mm + ' ' + ampm;
+  }
+
+  function validateCalendarEventForm(f) {
+    // Returns {ok: bool, error?: string, warning?: string, ...computed} For Use
+    // By Both The Live Preview And The Submit Path. Auto-Corrects "End Before
+    // Start" Rather Than Rejecting The Form, Per Spec.
+    const title = (f.title || '').trim();
+    if (!title) return { ok: false, error: 'Missing Event Title.' };
+    const allDay = !!f.allDay;
+    const tz = (f.tz || '').trim() || getBrowserTimezone();
+
+    const startParts = parseFriendlyDateTime(f.startDate, allDay ? '00:00' : f.startTime);
+    if (!startParts) {
+      return {
+        ok: false,
+        error: allDay ? 'Missing Or Invalid Start Date.' : 'Missing Or Invalid Start Date / Time.'
+      };
+    }
+    let endParts = parseFriendlyDateTime(
+      f.endDate || f.startDate,
+      allDay ? '00:00' : (f.endTime || f.startTime)
+    );
+    if (!endParts) {
+      // No End Provided — Default To Start; The Order Check Below Bumps It Forward.
+      endParts = Object.assign({}, startParts);
+    }
+
+    let warning = '';
+    let machineStart, machineEnd, friendlyStart, friendlyEnd;
+
+    if (allDay) {
+      // All-Day Path: Compare As Numeric YYYYMMDD For Ordering.
+      const startNum = startParts.year * 10000 + startParts.month * 100 + startParts.day;
+      const endNum = endParts.year * 10000 + endParts.month * 100 + endParts.day;
+      if (endNum < startNum) {
+        warning = 'End Date Was Before Start Date — Auto-Corrected To Match Start.';
+        endParts = Object.assign({}, startParts);
+      }
+      machineStart = formatCalendarDate(startParts);
+      // End Date Is Exclusive In Google Calendar's All-Day Format, So Bump
+      // Forward One Day Beyond The User's Last Day Of The Event.
+      machineEnd = formatCalendarDate(addOneDay(endParts));
+      friendlyStart = friendlyDateString(startParts);
+      friendlyEnd = friendlyDateString(endParts);
+    } else {
+      const startUtc = zonedWallTimeToUtc(startParts, tz);
+      let endUtc = zonedWallTimeToUtc(endParts, tz);
+      if (endUtc.getTime() <= startUtc.getTime()) {
+        // Auto-Correct: End Defaults To Start + 1 Hour When Invalid Or Missing.
+        endUtc = new Date(startUtc.getTime() + 60 * 60 * 1000);
+        warning = 'End Was At Or Before Start — Auto-Corrected To Start + 1 Hour.';
+      }
+      machineStart = formatCalendarUtc(startUtc);
+      machineEnd = formatCalendarUtc(endUtc);
+      friendlyStart = friendlyDateTimeString(startParts);
+      friendlyEnd = friendlyDateTimeString(endParts);
+    }
+
+    return {
+      ok: true,
+      warning: warning,
+      title: title,
+      location: (f.location || '').trim(),
+      details: (f.details || '').trim(),
+      tz: tz,
+      allDay: allDay,
+      startMachine: machineStart,
+      endMachine: machineEnd,
+      startFriendly: friendlyStart,
+      endFriendly: friendlyEnd
+    };
+  }
+
+  function buildGoogleCalendarUrl(v) {
+    // v Is The Validated Object From validateCalendarEventForm().
+    // Format Matches The Server-Side buildCalendarUri Output So Preview And
+    // Actual Write Stay In Sync.
+    const enc = s => encodeURIComponent(s == null ? '' : ('' + s));
+    const params = ['action=TEMPLATE', 'text=' + enc(v.title)];
+    if (v.location) params.push('location=' + enc(v.location));
+    if (v.details) params.push('details=' + enc(v.details));
+    params.push('dates=' + enc(v.startMachine + '/' + v.endMachine));
+    return 'https://calendar.google.com/calendar/render?' + params.join('&');
+  }
+
+  function calendarFieldEl(name) {
+    return document.querySelector('.taskFields[data-task="calendar"] [data-field="' + name + '"]');
+  }
+
+  function applyCalendarDefaultsOnce() {
+    // Run The First Time The Calendar Tab Becomes Active: Prefill Timezone
+    // To The Browser's Detected Zone (User Can Still Override).
+    if (calendarDefaultsApplied) return;
+    calendarDefaultsApplied = true;
+    const tzInput = calendarFieldEl('tz');
+    if (tzInput && !tzInput.value) tzInput.value = getBrowserTimezone();
+  }
+
+  function onCalendarAllDayChange() {
+    const allDay = !!document.getElementById('calAllDay').checked;
+    const startTimeRow = document.getElementById('calStartTimeRow');
+    const endTimeRow = document.getElementById('calEndTimeRow');
+    if (startTimeRow) startTimeRow.style.display = allDay ? 'none' : '';
+    if (endTimeRow) endTimeRow.style.display = allDay ? 'none' : '';
+    updatePreview();
+  }
+
+  function onCalendarStartChange() {
+    // Auto-Fill End To Start + 1 Hour When The User Has Not Manually Set End Yet.
+    if (!calEndManuallyEdited) autoFillEndPlusOneHour();
+    updatePreview();
+  }
+
+  function onCalendarEndChange() {
+    // Once The User Touches End Manually, Stop Auto-Filling It From Start.
+    calEndManuallyEdited = true;
+    updatePreview();
+  }
+
+  function autoFillEndPlusOneHour() {
+    const sd = calendarFieldEl('startDate');
+    const st = calendarFieldEl('startTime');
+    const ed = calendarFieldEl('endDate');
+    const et = calendarFieldEl('endTime');
+    if (!sd || !st || !ed || !et) return;
+    if (!sd.value) return;
+    const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(sd.value);
+    if (!dm) return;
+    const allDay = !!document.getElementById('calAllDay').checked;
+    if (allDay) {
+      // For All-Day, Just Mirror Start Date Into End Date When End Is Empty.
+      if (!ed.value) ed.value = sd.value;
+      return;
+    }
+    if (!st.value) return;
+    const tm = /^(\d{2}):(\d{2})/.exec(st.value);
+    if (!tm) return;
+    // Use UTC Math Here Because We Are Just Adding 1 Hour To Wall-Clock —
+    // No Real Timezone Is Involved In This Helper, Only Component Arithmetic.
+    const base = new Date(Date.UTC(
+      parseInt(dm[1], 10), parseInt(dm[2], 10) - 1, parseInt(dm[3], 10),
+      parseInt(tm[1], 10), parseInt(tm[2], 10), 0
+    ));
+    const plus = new Date(base.getTime() + 60 * 60 * 1000);
+    const pad2 = n => String(n).padStart(2, '0');
+    ed.value = plus.getUTCFullYear() + '-' +
+      pad2(plus.getUTCMonth() + 1) + '-' +
+      pad2(plus.getUTCDate());
+    et.value = pad2(plus.getUTCHours()) + ':' + pad2(plus.getUTCMinutes());
+  }
+
+  function updateCalendarPreview(validated, finalUrl) {
+    const el = document.getElementById('calendarPreview');
+    const adv = document.getElementById('calendarAdvanced');
+    if (!el) return;
+    if (!validated || !validated.ok) {
+      el.textContent = '(' + ((validated && validated.error) || 'Incomplete') + ')';
+      if (adv) adv.textContent = '-';
+      return;
+    }
+    const lines = ['This will create:', validated.title];
+    if (validated.allDay) {
+      if (validated.startFriendly === validated.endFriendly) {
+        lines.push(validated.startFriendly + ' (All Day)');
+      } else {
+        lines.push(validated.startFriendly + ' – ' + validated.endFriendly + ' (All Day)');
+      }
+    } else {
+      lines.push(validated.startFriendly + ' – ' + validated.endFriendly);
+      lines.push('Timezone: ' + validated.tz);
+    }
+    if (validated.location) lines.push('Location: ' + validated.location);
+    if (validated.details) lines.push('Notes: ' + validated.details);
+    if (validated.warning) {
+      lines.push('');
+      lines.push('Note: ' + validated.warning);
+    }
+    el.textContent = lines.join('\n');
+
+    if (adv) {
+      const advLines = [
+        'Start ISO: ' + validated.startMachine,
+        'End ISO:   ' + validated.endMachine,
+        'Final URL: ' + (finalUrl || buildGoogleCalendarUrl(validated))
+      ];
+      adv.textContent = advLines.join('\n');
+    }
+  }
+
+  // Mirror Of modules/nfcPayloads.py — Used For Live Preview Only.
+  // Server Rebuilds Authoritatively During The Actual Write.
+  function previewBuild(taskType, f) {
+    const trim = v => (v == null ? '' : ('' + v).trim());
+    const enc  = v => encodeURIComponent(v == null ? '' : ('' + v));
+    const encSafeComma = v => encodeURIComponent(v == null ? '' : ('' + v)).replace(/%2C/g, ',');
+    const encPlus = v => encodeURIComponent(v == null ? '' : ('' + v)).replace(/%20/g, '+').replace(/%2C/g, ',');
+
+    function normalizeUrl(value) {
+      const s = trim(value);
+      if (!s) return '';
+      if (/^[a-zA-Z][a-zA-Z0-9+.\-]*:/.test(s)) return s;
+      return 'https://' + s;
+    }
+    function normalizePhone(value) {
+      const s = trim(value);
+      if (!s) return '';
+      const hasPlus = s.startsWith('+');
+      const digits = s.replace(/\D+/g, '');
+      if (!digits) return '';
+      return hasPlus ? ('+' + digits) : digits;
+    }
+    function wifiEscape(s) {
+      let out = '';
+      const set = '\\;,:"';
+      for (const ch of s) {
+        if (set.indexOf(ch) !== -1) out += '\\';
+        out += ch;
+      }
+      return out;
+    }
+
+    if (taskType === 'web') {
+      const url = normalizeUrl(f.url);
+      if (!url) return { ok: false, error: 'Missing URL Or Host.' };
+      return { ok: true, mode: 'uri', payload: url, label: 'NDEF URI' };
+    }
+    if (taskType === 'tel') {
+      const n = normalizePhone(f.number);
+      if (!n) return { ok: false, error: 'Missing Phone Number.' };
+      return { ok: true, mode: 'uri', payload: 'tel:' + n, label: 'NDEF URI' };
+    }
+    if (taskType === 'sms') {
+      const n = normalizePhone(f.number);
+      if (!n) return { ok: false, error: 'Missing Phone Number.' };
+      const body = trim(f.message);
+      const p = body ? ('smsto:' + n + ':' + enc(body)) : ('smsto:' + n);
+      return { ok: true, mode: 'uri', payload: p, label: 'NDEF URI' };
+    }
+    if (taskType === 'mailto') {
+      const email = trim(f.email);
+      if (!email) return { ok: false, error: 'Missing Email Address.' };
+      if (email.indexOf('@') === -1) return { ok: false, error: 'Invalid Email Address.' };
+      const subject = trim(f.subject);
+      const body = trim(f.body);
+      const params = [];
+      if (subject) params.push('subject=' + enc(subject));
+      if (body) params.push('body=' + enc(body));
+      let p = 'mailto:' + email;
+      if (params.length) p += '?' + params.join('&');
+      return { ok: true, mode: 'uri', payload: p, label: 'NDEF URI' };
+    }
+    if (taskType === 'maps') {
+      const place = trim(f.place);
+      const street = trim(f.street);
+      const city = trim(f.city);
+      const state = trim(f.state);
+      const zipc = trim(f.zip);
+      const parts = [];
+      if (street) parts.push(street);
+      const sz = [state, zipc].filter(Boolean).join(' ');
+      const cityLine = [city, sz].filter(Boolean).join(', ');
+      if (cityLine) parts.push(cityLine);
+      let address = parts.join(', ');
+      if (place && address) address = place + ', ' + address;
+      else if (place) address = place;
+      if (!address) return { ok: false, error: 'Missing Address.' };
+      const encoded = encPlus(address);
+      return { ok: true, mode: 'uri', payload: 'https://maps.google.com/?q=' + encoded, label: 'NDEF URI' };
+    }
+    if (taskType === 'wifi') {
+      const ssid = trim(f.ssid);
+      if (!ssid) return { ok: false, error: 'Missing SSID.' };
+      let auth = (f.auth || 'WPA').toString().trim().toUpperCase();
+      if (!['WPA','WEP','NOPASS','OPEN'].includes(auth)) auth = 'WPA';
+      if (auth === 'OPEN' || auth === 'NOPASS') auth = 'nopass';
+      const password = (f.password == null ? '' : ('' + f.password));
+      const hidden = !!f.hidden;
+      let p = 'WIFI:T:' + auth + ';S:' + wifiEscape(ssid) + ';';
+      if (auth.toLowerCase() !== 'nopass') p += 'P:' + wifiEscape(password) + ';';
+      if (hidden) p += 'H:true;';
+      p += ';';
+      return { ok: true, mode: 'text', payload: p, label: 'NDEF Text / Compatibility Format' };
+    }
+    if (taskType === 'vcard') {
+      const u = normalizeUrl(f.url);
+      if (!u) return { ok: false, error: 'Missing vCard URL.' };
+      return { ok: true, mode: 'uri', payload: u, label: 'NDEF URI' };
+    }
+    if (taskType === 'calendar') {
+      const title = trim(f.title);
+      if (!title) return { ok: false, error: 'Missing Event Title.' };
+      const params = ['action=TEMPLATE', 'text=' + enc(title)];
+      const loc = trim(f.location);
+      const det = trim(f.details);
+      const st = trim(f.start);
+      const en = trim(f.end);
+      if (loc) params.push('location=' + enc(loc));
+      if (det) params.push('details=' + enc(det));
+      if (st && en) params.push('dates=' + enc(st + '/' + en));
+      else if (st) params.push('dates=' + enc(st));
+      const p = 'https://calendar.google.com/calendar/render?' + params.join('&');
+      return { ok: true, mode: 'uri', payload: p, label: 'NDEF URI' };
+    }
+    if (taskType === 'deeplink') {
+      const u = trim(f.uri);
+      if (!u) return { ok: false, error: 'Missing Deep Link URI.' };
+      if (!/^[a-zA-Z][a-zA-Z0-9+.\-]*:/.test(u)) {
+        return { ok: false, error: 'Deep Link Must Include A Scheme (e.g. youtube://...).' };
+      }
+      return { ok: true, mode: 'uri', payload: u, label: 'NDEF URI / App Deep Link' };
+    }
+    if (taskType === 'navigation') {
+      const dest = trim(f.destination);
+      if (!dest) return { ok: false, error: 'Missing Destination.' };
+      return { ok: true, mode: 'uri', payload: 'google.navigation:q=' + encPlus(dest), label: 'Android-only / Experimental' };
+    }
+    if (taskType === 'payment') {
+      const u = normalizeUrl(f.url);
+      if (!u) return { ok: false, error: 'Missing Payment URL.' };
+      return { ok: true, mode: 'uri', payload: u, label: 'NDEF URI' };
+    }
+    if (taskType === 'text') {
+      const t = trim(f.text);
+      if (!t) return { ok: false, error: 'Missing Text.' };
+      return { ok: true, mode: 'text', payload: t, label: 'NDEF Text' };
+    }
+    if (taskType === 'custom') {
+      const p = trim(f.payload);
+      if (!p) return { ok: false, error: 'Missing Payload.' };
+      const mode = (f.mode === 'text') ? 'text' : 'uri';
+      return { ok: true, mode: mode, payload: p, label: mode === 'uri' ? 'NDEF URI' : 'NDEF Text' };
+    }
+    return { ok: false, error: 'Unknown Task Type.' };
+  }
+
+  function updatePreview() {
+    const ctx = getActiveFields();
+    const built = previewBuild(ctx.taskType, ctx.fields);
+    const previewEl = document.getElementById('taskPreview');
+    const labelEl = document.getElementById('taskLabel');
+    if (built.ok) {
+      previewEl.textContent = built.payload || '-';
+      labelEl.textContent = built.label;
+    } else {
+      previewEl.textContent = '(' + (built.error || 'Incomplete') + ')';
+      labelEl.textContent = '-';
+    }
+    if (ctx.taskType === 'calendar') {
+      // Refresh The Friendly Event Summary Card And The Advanced Machine View.
+      const v = validateCalendarEventForm(ctx.fields);
+      updateCalendarPreview(v, built.ok ? built.payload : '');
+    }
+  }
+
+  async function writeTask() {
+    const status = document.getElementById('taskStatus');
+    const ctx = getActiveFields();
+    const built = previewBuild(ctx.taskType, ctx.fields);
+    if (!built.ok) {
+      if (status) status.textContent = 'Error: ' + (built.error || 'Incomplete');
+      return;
+    }
+    if (status) status.textContent = 'Writing...';
+    const r = await apiPost('/api/nfc/writeTask', { taskType: ctx.taskType, fields: ctx.fields });
+    if (status) {
+      if (r.ok) {
+        status.textContent = 'OK' + (r.tagFamily ? (' (' + r.tagFamily + ')') : '') + ' — Wrote: ' + (r.payload || '');
+      } else {
+        status.textContent = 'Error: ' + (r.error || 'Unknown') + (r.stage ? (' [' + r.stage + ']') : '');
+      }
+    }
     showJson('scanOut', r);
   }
 
@@ -403,4 +1120,5 @@
   }
 
   refreshStatus();
+  onTaskTypeChange();
 </script>
