@@ -19,6 +19,7 @@ from modules.featureConfig import loadFeatures, saveFeatures, setFeatureEnabled,
 from modules.irInit import enableIrProtocols
 from modules.pn532Module import PN532Module
 from modules.type2TagTools import Type2TagTools
+from modules.nfcPayloads import buildTaskPayload
 
 app = Flask(__name__)
 
@@ -222,18 +223,47 @@ if isEnabled(features, "nfc_pn532"):
             return jsonify({"ok": False, "error": "Missing URL"})
         return jsonify(pn532.tryWriteNdefUri(uri=url))
 
-    # For Making Other Tasks Or Even A Custom URI Writer
-    """
-    @app.post("/api/nfc/writeNdefUri")
-    def apiNfcWriteNdefUri():
+    @app.post("/api/nfc/writeTask")
+    def apiNfcWriteTask():
+        # Dropdown-Driven Writer: Build A Payload From Natural Inputs,
+        # Then Write Via The Existing tryWriteNdefUri / tryWriteNdefText Helpers.
         if not pn532:
             return jsonify({"ok": False, "error": "PN532 Disabled"})
         data = request.get_json(force=True) or {}
-        uri = (data.get("uri") or "").strip()
-        if not uri:
-            return jsonify({"ok": False, "error": "Missing URI"})
-        return jsonify(pn532.tryWriteNdefUri(uri=uri))
-    """
+        taskType = (data.get("taskType") or "").strip().lower()
+        fields = data.get("fields") or {}
+        built = buildTaskPayload(taskType, fields)
+        if not built.get("ok"):
+            return jsonify({"ok": False, "stage": "build", "error": built.get("error", "Build Failed")})
+
+        mode = built.get("mode", "uri")
+        payload = built.get("payload", "")
+        label = built.get("label", "NDEF URI")
+
+        if mode == "text":
+            language = (fields.get("language") or "en").strip() or "en"
+            writeResult = pn532.tryWriteNdefText(text=payload, language=language)
+        else:
+            writeResult = pn532.tryWriteNdefUri(uri=payload)
+
+        # Merge Build Metadata Onto The Write Result So The UI Can Show The Final Payload
+        merged = dict(writeResult or {})
+        merged["taskType"] = taskType
+        merged["mode"] = mode
+        merged["payload"] = payload
+        merged["label"] = label
+        if "stage" not in merged:
+            merged["stage"] = "write"
+        return jsonify(merged)
+
+    @app.post("/api/nfc/buildTaskPayload")
+    def apiNfcBuildTaskPayload():
+        # Same Build Logic As writeTask, But Returns The Payload Without Touching The Tag.
+        # Useful For Server-Side Preview Or Tooling.
+        data = request.get_json(force=True) or {}
+        taskType = (data.get("taskType") or "").strip().lower()
+        fields = data.get("fields") or {}
+        return jsonify(buildTaskPayload(taskType, fields))
 
     @app.post("/api/nfc/dumpClassic")
     def apiNfcDumpClassic():
