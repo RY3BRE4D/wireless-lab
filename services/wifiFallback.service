@@ -8,7 +8,7 @@ Type=simple
 User=root
 WorkingDirectory=/home/piradio/wireless-lab
 ExecStart=/home/piradio/wireless-lab/venv/bin/python /home/piradio/wireless-lab/services/wifiFallback.py
-Restart=always
+Restart=on-failure
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
 

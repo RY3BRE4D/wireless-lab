@@ -170,6 +170,26 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now panicButton
 ```
 
+### 7. *(Optional)* Free up memory on a headless Pi
+
+A Pi Zero 2 W has only 512 MB of RAM. If nothing is plugged into the HDMI port, you can give most of the graphics memory back to Linux and turn off services wireless-lab doesn't use.
+
+In `/boot/firmware/config.txt`, comment out the display driver and shrink the GPU memory split:
+
+```
+#dtoverlay=vc4-kms-v3d
+gpu_mem=16
+```
+
+Disable services that aren't needed. This covers the cellular modem manager, Bluetooth, keyboard hotkeys, and the LIRC daemon; wireless-lab talks to the kernel's IR driver directly, so it doesn't need `lircd`.
+
+```
+sudo systemctl disable --now ModemManager bluetooth hciuart triggerhappy.socket triggerhappy lircd.socket lircd
+sudo reboot
+```
+
+To undo, uncomment the `dtoverlay` line, remove `gpu_mem=16`, and `enable` the services again. Skip this step if you plan to use a screen, a camera, or Bluetooth.
+
 ### About permissions
 
 The web UI runs as your normal user but needs to run `nmcli`, `ir-keytable`, and `systemctl reboot`/`poweroff` with `sudo`. It uses `sudo` **without a password prompt**, which is how Raspberry Pi OS sets up the first user by default. If you've changed that, those features will fail.
@@ -242,7 +262,7 @@ Manage the Pi's Wi-Fi using NetworkManager.
 - **Setup AP** controls let you start or stop the setup hotspot by hand.
 
 ### Modules
-Turn features on or off. This writes to `config/features.json`. **Restart the web UI** afterward (Stats → Restart, or `sudo systemctl restart wireless-lab`) for changes to fully take effect.
+Turn features on or off. This writes to `config/features.json`. **Restart** afterward for changes to fully take effect: either reboot (Stats → Restart), or run `sudo systemctl restart wireless-lab wifiFallback`. The Wi-Fi fallback service only runs while the WiFi module is enabled, so turning WiFi back on needs a restart too.
 
 ### Pinout
 A Raspberry Pi pinout diagram, handy while wiring.
